@@ -1,0 +1,2387 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orange Juice Idle Tycoon - Chef & Custom Orders Edition (v4)</title>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@400;600;700&display=swap');
+
+    * { box-sizing: border-box; user-select: none; font-family: 'Kanit', sans-serif; }
+
+    body { background-color: #3d7a2a; margin: 0; padding: 12px; display: flex; justify-content: center; }
+
+    .game-wrapper { width: 100%; max-width: 1120px; display: flex; flex-direction: column; gap: 10px; }
+
+    .top-bar { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .stat-card {
+        background: #fffcf2; border: 3px solid #6b4c35; border-radius: 6px; padding: 6px 12px;
+        display: flex; flex-direction: column; justify-content: center;
+        box-shadow: inset 0 0 0 2px #e6ccb2, 0 3px 0 #3a2618; color: #2b2b2b; min-height: 58px;
+    }
+    .stat-card.clickable { cursor: pointer; transition: transform 0.08s; }
+    .stat-card.clickable:active { transform: translateY(2px); }
+    .stat-title { font-weight: 700; font-size: 1rem; display: flex; align-items: center; gap: 6px; }
+    .stat-sub { font-size: 0.8rem; color: #666; margin-top: 2px; }
+
+    .progress-track { width: 100%; height: 11px; background: #fff; border: 2px solid #5a3e28; border-radius: 3px; margin-top: 5px; overflow: hidden; }
+    .progress-fill { height: 100%; background: #f59e0b; width: 50%; transition: width 0.25s; }
+
+    .scene-box { width: 100%; height: 410px; border: 4px solid #6b4c35; border-radius: 4px; overflow: hidden; position: relative; background: #2b3a3a; box-shadow: 0 4px 10px rgba(0,0,0,0.35); }
+    canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; cursor: pointer; }
+
+    .menu-grid { display: grid; grid-template-columns: repeat(11, 1fr); gap: 8px; }
+    .menu-btn {
+        background: linear-gradient(to bottom, #ff8c00, #e67300); border: 2px solid #8a3c00; border-bottom-width: 4px; border-radius: 6px;
+        color: #fff; font-weight: 700; font-size: 0.88rem; padding: 12px 4px; cursor: pointer;
+        display: flex; align-items: center; justify-content: center; gap: 5px; text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+        transition: transform 0.08s, filter 0.15s; position: relative;
+    }
+    .menu-btn:hover { filter: brightness(1.08); }
+    .menu-btn:active { transform: translateY(2px); border-bottom-width: 2px; }
+    .menu-btn .dot { position: absolute; top: -6px; right: -6px; background: #e11d48; color: #fff; border-radius: 50%; width: 20px; height: 20px; font-size: 0.7rem; display: none; align-items: center; justify-content: center; border: 2px solid #fff; }
+
+    .control-row { display: grid; grid-template-columns: 2.2fr 1fr 0.9fr; gap: 10px; }
+    .queue-panel {
+        background: #fffcf2; border: 3px solid #6b4c35; border-radius: 6px; display: flex; justify-content: space-around; align-items: center;
+        padding: 10px 15px; font-weight: 700; font-size: 1.05rem; box-shadow: 0 3px 0 #3a2618;
+    }
+    .green-val { color: #16a34a; }
+
+    .happy-btn, .skip-btn {
+        border-radius: 6px; color: white; font-weight: 700; font-size: 1.05rem; cursor: pointer;
+        display: flex; align-items: center; justify-content: center; gap: 6px; text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+        border-bottom-width: 4px; border-style: solid; border-width: 2px 2px 4px 2px;
+    }
+    .happy-btn { background: linear-gradient(to bottom, #ff8c00, #e67300); border-color: #8a3c00; }
+    .happy-btn.active { background: linear-gradient(to bottom, #ec4899, #be185d); border-color: #831843; animation: pulse 0.8s infinite alternate; }
+    .skip-btn { background: linear-gradient(to bottom, #e11d48, #be123c); border-color: #881337; }
+    @keyframes pulse { from { filter: brightness(1); } to { filter: brightness(1.2); } }
+
+    .terminal-box {
+        background: #141413; border: 3px solid #4a5d23; border-radius: 6px; padding: 12px 16px; height: 75px; overflow-y: auto;
+        font-family: 'Courier New', Courier, monospace; color: #22c55e; font-size: 0.95rem; line-height: 1.5; box-shadow: inset 0 2px 6px rgba(0,0,0,0.7);
+    }
+
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.65); display: none; justify-content: center; align-items: center; z-index: 999; }
+    .modal-window {
+        background: #fffcf2; border: 4px solid #6b4c35; border-radius: 10px; width: 92%; max-width: 580px; padding: 20px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.5); color: #2b2b2b; max-height: 85vh; overflow-y: auto;
+    }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e6ccb2; padding-bottom: 10px; margin-bottom: 15px; }
+    .modal-header h3 { margin: 0; font-size: 1.3rem; color: #6b4c35; }
+    .close-btn { background: #e11d48; color: #fff; border: none; border-radius: 5px; padding: 5px 12px; font-weight: bold; cursor: pointer; }
+
+    .item-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: #f5ebe0; padding: 10px 14px; border-radius: 6px; margin-bottom: 8px; border: 1px solid #d5bdaf; }
+    .item-row.done { background: #dcfce7; border-color: #86efac; }
+    .item-row small { color: #78716c; display: block; font-size: 0.78rem; }
+
+    .buy-action-btn { background: #16a34a; color: white; border: none; padding: 7px 14px; border-radius: 5px; font-weight: bold; cursor: pointer; white-space: nowrap; }
+    .buy-action-btn:disabled { background: #9ca3af; cursor: not-allowed; }
+    .equip-btn { background: #2563eb; color: white; border: none; padding: 7px 14px; border-radius: 5px; font-weight: bold; cursor: pointer; white-space: nowrap; }
+
+    .badge-hint { background: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 8px 12px; border-radius: 6px; font-size: 0.9rem; margin-top: 8px; }
+    .section-title { font-weight: 700; color: #6b4c35; margin: 14px 0 8px; border-bottom: 1px dashed #d5bdaf; padding-bottom: 4px; }
+
+    .pom-icon {
+        width: 42px;
+        height: 42px;
+        vertical-align: middle;
+        image-rendering: pixelated;
+        margin-right: 6px;
+        filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2));
+    }
+
+    #minigameCanvas {
+        background: linear-gradient(to bottom, #7dd3fc, #bae6fd);
+        border: 3px solid #6b4c35;
+        border-radius: 8px;
+        display: block;
+        margin: 10px auto;
+        cursor: ew-resize;
+        touch-action: none;
+    }
+
+    @media (max-width: 900px) {
+        .menu-grid { grid-template-columns: repeat(6, 1fr); }
+        .control-row { grid-template-columns: 1fr; }
+    }
+</style>
+</head>
+<body>
+
+<div class="game-wrapper">
+    <div class="top-bar">
+        <div class="stat-card" style="flex: 1.1;">
+            <div class="stat-title">🗓️ วันที่ <span id="ui-day">8</span></div>
+            <div class="stat-sub"><span id="ui-location">🌾 ถนนชนบท</span></div>
+        </div>
+
+        <div class="stat-card" style="flex: 2.2;">
+            <div class="stat-title">
+                ⏰ <span id="ui-time">17:40</span>
+                <span id="ui-period" style="font-weight:400; font-size:0.85rem; color:#555;">เปิดร้าน • ช่วงเย็น</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" id="ui-time-bar" style="width: 82%;"></div></div>
+        </div>
+
+        <div class="stat-card clickable" style="flex: 0.9;" onclick="cycleWeather()" title="คลิกเพื่อเปลี่ยนสภาพอากาศ">
+            <div class="stat-title" id="ui-weather">🌧️ ฝนตก</div>
+            <div class="stat-sub">สภาพอากาศ</div>
+        </div>
+
+        <div class="stat-card" style="flex: 0.9;">
+            <div class="stat-title">🪙 <span id="ui-money">135</span> ฿</div>
+            <div class="stat-sub">เงินสด</div>
+        </div>
+
+        <div class="stat-card" style="flex: 1.6;">
+            <div class="stat-title">⭐ ชื่อเสียง <span id="ui-rep">45</span></div>
+            <div class="progress-track"><div class="progress-fill" id="ui-rep-bar" style="width: 45%;"></div></div>
+        </div>
+
+        <div class="stat-card" style="flex: 1.3;">
+            <div class="stat-title">🏪 เลเวลร้าน <span id="ui-level">1</span></div>
+            <div class="progress-track"><div class="progress-fill" id="ui-xp-bar" style="width:0%; background:#3b82f6;"></div></div>
+        </div>
+
+        <div class="stat-card clickable" style="flex: 0.7;" onclick="toggleSound()">
+            <div class="stat-title">🔊 เสียง</div>
+            <div class="stat-sub" id="ui-sound">เปิด</div>
+        </div>
+
+        <div class="stat-card clickable" style="flex: 0.8;" onclick="toggleSpeed()">
+            <div class="stat-title">⚡ ความเร็ว</div>
+            <div class="stat-sub" id="ui-speed">x1</div>
+        </div>
+    </div>
+
+    <div class="scene-box">
+        <canvas id="gameCanvas" width="1100" height="410"></canvas>
+    </div>
+
+    <div class="menu-grid">
+        <button class="menu-btn" onclick="openMenu('inventory')">📦 คลังสินค้า</button>
+        <button class="menu-btn" onclick="openMenu('recipe')">📜 สูตร</button>
+        <button class="menu-btn" onclick="openMenu('location')">🗺️ สถานที่</button>
+        <button class="menu-btn" onclick="openMenu('minigame')">🎮 มินิเกม</button>
+        <button class="menu-btn" onclick="openMenu('quest')">🎯 ภารกิจ<span class="dot" id="quest-dot">0</span></button>
+        <button class="menu-btn" onclick="openMenu('market')">📈 ตลาด</button>
+        <button class="menu-btn" onclick="openMenu('price')">🏷️ ราคา</button>
+        <button class="menu-btn" onclick="openMenu('upgrade')">⬆️ อัปเกรด</button>
+        <button class="menu-btn" onclick="openMenu('decor')">🛋️ ตกแต่ง</button>
+        <button class="menu-btn" onclick="openMenu('tables')">🪑 โต๊ะ</button>
+        <button class="menu-btn" onclick="openMenu('stats')">📊 สถิติ</button>
+    </div>
+
+    <div class="control-row">
+        <div class="queue-panel">
+            <div>
+                🧃 เหลือ: <span class="green-val" id="ui-stock">0</span>
+                <button class="buy-action-btn" style="margin-left:8px; padding:4px 10px; font-size:0.85rem;" onclick="craftJuice(true)">+ คั้นน้ำส้มสด</button>
+            </div>
+            <div>คิว <span class="green-val" id="ui-queue">2/3</span></div>
+        </div>
+        <button class="happy-btn" id="btn-happy" onclick="triggerHappyHour()">🎉 Happy Hour</button>
+        <button class="skip-btn" onclick="skipToNextDay()">⏭️ ข้ามวัน</button>
+    </div>
+
+    <div class="terminal-box" id="log-container">
+        <div>&gt; เปิดร้านขายน้ำส้มรอบเช้าแล้ว พ่อค้าแพนด้าพร้อมคั้นน้ำส้ม ลูกค้ากำลังทยอยเดินมาสั่งอาหาร...</div>
+    </div>
+</div>
+
+<div class="modal-backdrop" id="modalBackdrop" onclick="if(event.target===this) closeModal()">
+    <div class="modal-window">
+        <div class="modal-header">
+            <h3 id="modalTitle">เมนู</h3>
+            <button class="close-btn" onclick="closeModal()">✕ ปิด</button>
+        </div>
+        <div id="modalContent"></div>
+    </div>
+</div>
+
+<script>
+    // ===================== สไปรต์น้องหมาปอมเมอเรเนียน Pixel Art =====================
+    const POM_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 30" shape-rendering="crispEdges">
+        <rect x="4" y="27" width="23" height="2" fill="#8b7d7b" opacity="0.75"/>
+        <rect x="6" y="26" width="19" height="1" fill="#8b7d7b" opacity="0.55"/>
+        <rect x="4" y="8" width="5" height="1" fill="#000"/>
+        <rect x="3" y="9" width="1" height="2" fill="#000"/><rect x="9" y="9" width="1" height="2" fill="#000"/>
+        <rect x="2" y="11" width="1" height="4" fill="#000"/>
+        <rect x="4" y="9" width="5" height="2" fill="#fdf5e6"/>
+        <rect x="3" y="11" width="7" height="3" fill="#fdf5e6"/>
+        <rect x="3" y="14" width="6" height="2" fill="#f3dab2"/>
+        <rect x="6" y="11" width="2" height="2" fill="#d9b38c"/>
+        <rect x="13" y="4" width="3" height="1" fill="#000"/><rect x="21" y="4" width="3" height="1" fill="#000"/>
+        <rect x="12" y="5" width="1" height="3" fill="#000"/><rect x="16" y="5" width="1" height="2" fill="#000"/>
+        <rect x="20" y="5" width="1" height="2" fill="#000"/><rect x="24" y="5" width="1" height="3" fill="#000"/>
+        <rect x="17" y="6" width="3" height="1" fill="#000"/>
+        <rect x="13" y="5" width="3" height="3" fill="#f3dab2"/><rect x="21" y="5" width="3" height="3" fill="#f3dab2"/>
+        <rect x="14" y="6" width="1" height="2" fill="#e5987e"/><rect x="22" y="6" width="1" height="2" fill="#e5987e"/>
+        <rect x="11" y="8" width="1" height="2" fill="#000"/><rect x="25" y="8" width="1" height="2" fill="#000"/>
+        <rect x="10" y="10" width="1" height="3" fill="#000"/><rect x="26" y="10" width="1" height="3" fill="#000"/>
+        <rect x="27" y="13" width="1" height="6" fill="#000"/>
+        <rect x="26" y="19" width="1" height="3" fill="#000"/>
+        <rect x="25" y="22" width="1" height="2" fill="#000"/>
+        <rect x="3" y="15" width="1" height="7" fill="#000"/>
+        <rect x="4" y="22" width="1" height="2" fill="#000"/>
+        <rect x="12" y="7" width="13" height="3" fill="#f3dab2"/>
+        <rect x="11" y="10" width="15" height="4" fill="#f3dab2"/>
+        <rect x="4" y="15" width="23" height="7" fill="#f3dab2"/>
+        <rect x="5" y="22" width="20" height="2" fill="#e3be91"/>
+        <rect x="13" y="11" width="12" height="5" fill="#fdf5e6"/>
+        <rect x="14" y="16" width="12" height="4" fill="#fdf5e6"/>
+        <rect x="15" y="20" width="9" height="2" fill="#f8e8ce"/>
+        <rect x="11" y="13" width="2" height="3" fill="#d9b38c"/>
+        <rect x="15" y="10" width="2" height="2" fill="#000"/>
+        <rect x="15" y="10" width="1" height="1" fill="#fff"/>
+        <rect x="21" y="10" width="2" height="2" fill="#000"/>
+        <rect x="21" y="10" width="1" height="1" fill="#fff"/>
+        <rect x="18" y="12" width="2" height="1" fill="#000"/>
+        <rect x="17" y="13" width="4" height="1" fill="#000"/>
+        <rect x="16" y="12" width="1" height="1" fill="#a67c52"/>
+        <rect x="5" y="24" width="3" height="3" fill="#000"/><rect x="6" y="24" width="2" height="2" fill="#fdf5e6"/>
+        <rect x="10" y="23" width="3" height="3" fill="#000"/><rect x="11" y="23" width="1" height="2" fill="#d9b38c"/>
+        <rect x="16" y="24" width="3" height="4" fill="#000"/><rect x="17" y="23" width="2" height="4" fill="#fdf5e6"/>
+        <rect x="21" y="24" width="3" height="3" fill="#000"/><rect x="22" y="24" width="1" height="2" fill="#e3be91"/>
+        <rect x="8" y="23" width="2" height="1" fill="#000"/><rect x="13" y="24" width="3" height="1" fill="#000"/><rect x="19" y="24" width="2" height="1" fill="#000"/>
+    </svg>`;
+
+    const DOG_URI = 'data:image/svg+xml;utf8,' + encodeURIComponent(POM_SVG);
+    const dogImg = new Image();
+    dogImg.src = DOG_URI;
+
+    // ===================== เมนูอาหาร/เครื่องดื่มที่ลูกค้าสั่งบนหัว =====================
+    const FOOD_ORDERS = [
+        { name: 'น้ำส้มคั้นสด', icon: '🧃', bonus: 0 },
+        { name: 'น้ำส้มปั่นเกล็ดหิมะ', icon: '🍊', bonus: 3 },
+        { name: 'น้ำส้มโซดาซ่า', icon: '🍹', bonus: 4 },
+        { name: 'น้ำส้ม + เค้กส้ม', icon: '🍰', bonus: 6 },
+        { name: 'น้ำส้มน้ำผึ้งมะนาว', icon: '🍋', bonus: 5 }
+    ];
+
+    // ===================== ค่าคงที่ของเกม =====================
+    const SAVE_KEY = 'orangeTycoonUltimateSave';
+    const BX = 575, BY = 78;
+    const TABLE_SPOTS = [{ x: 120, y: 262 }, { x: 250, y: 262 }, { x: 380, y: 262 }, { x: 185, y: 318 }, { x: 315, y: 318 }];
+    const TABLE_COST = [90, 130, 170, 220, 280];
+
+    const LOCATIONS = {
+        country: { name: 'ถนนชนบท',   icon: '🌾', cost: 0,   rent: 0,  rate: 1.0,  tol: 32, desc: 'ค่าเช่าฟรี ลูกค้าน้อย ลูกค้าไม่ค่อยจ่ายแพง' },
+        park:    { name: 'สวนสาธารณะ', icon: '🏞️', cost: 100, rent: 10, rate: 1.25, tol: 42, desc: 'ลูกค้าเพิ่ม 25% จ่ายแพงขึ้นได้ (ค่าเช่า 10 ฿/วัน)' },
+        beach:   { name: 'ชายหาด',     icon: '🏖️', cost: 250, rent: 25, rate: 1.5,  tol: 55, desc: 'ลูกค้าเพิ่ม 50% วันแดดออกทิป +4 ฿ (ค่าเช่า 25 ฿/วัน)' }
+    };
+
+    const EVENTS = [
+        { id: 'none',      w: 45, text: '',                                                                                rate: 1.0 },
+        { id: 'festival',  w: 18, text: '🎪 เทศกาลประจำเมือง! ลูกค้าเพิ่ม 60% ทั้งวัน',                                    rate: 1.6 },
+        { id: 'bus',       w: 12, text: '🚌 รถทัวร์นักท่องเที่ยวมาถึง! ลูกค้ากลุ่มใหญ่กำลังเดินมา',                         rate: 1.2, burst: 4 },
+        { id: 'inspector', w: 13, text: '🕵️ ผู้ตรวจสุขอนามัยจะแวะตอนเที่ยง! มีน้ำส้มพร้อมขาย 3 แก้วขึ้นไป ได้ชื่อเสียง +5', rate: 1.0 },
+        { id: 'heat',      w: 12, text: '🥵 คลื่นความร้อน! สูตรที่มีน้ำแข็ง 2+ ก้อนได้ทิป +3 ฿ ต่อแก้ว',                   rate: 1.15 }
+    ];
+
+    const DECOR = {
+        plants:   { icon: '🪙', label: '🪴 กระถางต้นไม้', cost: 60,  desc: 'ลูกค้าอดทนรอนานขึ้น +1.5 วินาที' },
+        radio:    { icon: '📻', label: '📻 วิทยุเพลงเพราะ', cost: 90,  desc: 'ลูกค้าให้ทิปเพิ่ม +1 ฿ ทุกแก้ว' },
+        flag:     { icon: '🚩', label: '🚩 ธงโปรโมตร้าน', cost: 120, desc: 'ลูกค้าเดินมาเพิ่ม 8%' },
+        umbrella: { icon: '⛱️', label: '⛱️ ร่มใหญ่หน้าร้าน', cost: 150, desc: 'วันฝนตก/แดดออก ลูกค้าเพิ่ม 10%' },
+        sofa:     { label: '🛋️ โซฟานุ่มข้างโต๊ะ', cost: 180, desc: 'ลูกค้านั่งทานที่ร้านจ่ายเพิ่ม +50%' },
+        rug:      { label: '🟥 พรมแดงต้อนรับ', cost: 70, desc: 'ลูกค้าอดทนรอคิวนานขึ้น +1 วินาที' },
+        fountain: { label: '⛲ น้ำพุหน้าร้าน', cost: 200, desc: 'ลูกค้าอดทนรอนานขึ้น +1 วินาที และร้านดูหรูขึ้น' },
+        lantern:  { label: '🏮 โคมไฟแดง', cost: 110, desc: 'ช่วงค่ำลูกค้าเดินมาเพิ่ม 10%' },
+        luckycat: { label: '🐱 แมวกวักนำโชค', cost: 250, desc: 'โอกาสเจอลูกค้า VIP และนักวิจารณ์เพิ่มขึ้น' }
+    };
+
+    const OUTFITS = {
+        classic: { label: '🐼 ชุดแพนด้าเชฟผ้าพันคอแดง', cost: 0,   scarf: '#ef4444', hat: '#ffffff', glasses: false, tipBonus: 0, desc: 'ชุดแพนด้าเชฟต้นฉบับพร้อมหมวกเชฟ' },
+        chef:    { label: '👨‍🍳 ชุดเชฟมิชลินผ้าพันคอทอง', cost: 120, scarf: '#f59e0b', hat: '#fef08a', glasses: false, tipBonus: 2, desc: 'หมวกเชฟขลิบทอง ลูกค้าให้ทิป +2 ฿' },
+        hawaii:  { label: '🌺 ชุดแพนด้าซัมเมอร์แว่นดำ',   cost: 160, scarf: '#06b6d4', hat: '#fde047', glasses: true,  tipBonus: 3, desc: 'พร้อมแว่นกันแดดสุดคูล ลูกค้าให้ทิป +3 ฿' },
+        tycoon:  { label: '🤵 ชุดแพนด้าเถ้าแก่ใหญ่',      cost: 300, scarf: '#a855f7', hat: '#f59e0b', glasses: true,  tipBonus: 5, desc: 'หรูหราระดับภัตตาคาร ลูกค้าให้ทิป +5 ฿' }
+    };
+
+    const BOOTH_SKINS = {
+        classic: { label: '🪵 ซุ้มไม้ดั้งเดิม',      cost: 0,   c1: '#e07a5f', c2: '#f4f1de', body: '#7f5539', top: '#9c6644', signBg: '#8d5b4c', signTxt: '#ffd166', rateBonus: 0,    desc: 'ซุ้มไม้คลาสสิก' },
+        pastel:  { label: '🍬 ซุ้มคาเฟ่พาสเทล',      cost: 150, c1: '#f472b6', c2: '#bae6fd', body: '#fbcfe8', top: '#f9a8d4', signBg: '#db2777', signTxt: '#ffffff', rateBonus: 0.08, desc: 'สีหวานน่ารัก ดึงลูกค้าเพิ่ม +8%' },
+        gold:    { label: '👑 ซุ้มทองคำหรูหรา',      cost: 280, c1: '#f59e0b', c2: '#fef08a', body: '#b45309', top: '#facc15', signBg: '#78350f', signTxt: '#fde047', rateBonus: 0.15, desc: 'ซุ้มสีทองอร่าม ดึงลูกค้าเพิ่ม +15%' },
+        neon:    { label: '⚡ ซุ้มนีออนไซเบอร์',     cost: 350, c1: '#06b6d4', c2: '#a855f7', body: '#1e1b4b', top: '#38bdf8', signBg: '#0f172a', signTxt: '#22d3ee', rateBonus: 0.22, desc: 'ไฟนีออนล้ำยุค ดึงลูกค้าเพิ่ม +22%' }
+    };
+
+    const UPGRADES = {
+        press:  { label: '🔧 เครื่องคั้นเทอร์โบ', max: 3, base: 90,  desc: 'คั้นอัตโนมัติไวขึ้น และมีโอกาสได้แก้วโบนัสตอนกดคั้นเอง' },
+        cooler: { label: '🧊 ตู้แช่น้ำส้ม',       max: 3, base: 70,  desc: 'เก็บน้ำส้มพร้อมขายได้เพิ่ม +6 แก้วต่อเลเวล' },
+        sign:   { label: '🪧 ป้ายร้านเรืองแสง',   max: 3, base: 100, desc: 'ลูกค้าเดินมาเพิ่ม 10% ต่อเลเวล' }
+    };
+
+    const ACHS = [
+        { id: 's50',    t: '🥉 ขายครบ 50 แก้ว',               r: 30,  ok: () => state.totalSold >= 50 },
+        { id: 's200',   t: '🥈 ขายครบ 200 แก้ว',              r: 80,  ok: () => state.totalSold >= 200 },
+        { id: 's1000',  t: '🥇 ขายครบ 1,000 แก้ว',            r: 300, ok: () => state.totalSold >= 1000 },
+        { id: 'e2000',  t: '💰 รายได้สะสม 2,000 ฿',           r: 100, ok: () => state.totalEarned >= 2000 },
+        { id: 'rep80',  t: '⭐ ชื่อเสียงถึง 80',                r: 100, ok: () => state.rep >= 80 },
+        { id: 'team',   t: '🐾 จ้างทั้งแมวและหมา',             r: 100, ok: () => state.hasCatStaff && state.hasDogWaiter },
+        { id: 'vip5',   t: '👑 บริการ VIP ครบ 5 คน',          r: 80,  ok: () => state.totalVip >= 5 },
+        { id: 'beach',  t: '🏖️ เปิดร้านที่ชายหาด',            r: 100, ok: () => state.locId === 'beach' },
+        { id: 'upg',    t: '🔧 อัปเกรดร้านรวมครบ 6 เลเวล',    r: 120, ok: () => (state.upg.press + state.upg.cooler + state.upg.sign) >= 6 },
+        { id: 'decor',  t: '🛋️ ตกแต่งร้านครบทุกชิ้น',          r: 100, ok: () => Object.values(state.decor).every(v => v) },
+        { id: 'dine20', t: '🪑 ลูกค้านั่งทานที่ร้านครบ 20 คน', r: 90,  ok: () => state.totalDine >= 20 },
+        { id: 'lv6',    t: '🏪 ร้านเลเวล 6',                   r: 150, ok: () => levelInfo().lv >= 6 }
+    ];
+
+    // ===================== ข้อมูลสถานะเกม =====================
+    const defaultState = {
+        day: 8,
+        minutes: 17 * 60 + 40,
+        weatherList: [
+            { id: 'rain', label: '🌧️ ฝนตก', rateMod: 0.9, hint: 'วันฝนตก: ลูกค้าชอบน้ำส้มเข้มข้นหวานฉ่ำ (🍊 3+ และ 🍬 2+) จะให้ทิป +8 ฿!' },
+            { id: 'sunny', label: '☀️ แดดออก', rateMod: 1.35, hint: 'วันแดดออก: ลูกค้าชอบน้ำแข็งเย็นชื่นใจ (🧊 2+) จะให้ทิป +6 ฿!' },
+            { id: 'cloudy', label: '⛅ มีเมฆมาก', rateMod: 1.1, hint: 'วันมีเมฆมาก: ลูกค้าชอบสูตรกลมกล่อม (🍊 2, 🍬 2, 🧊 1) จะให้ทิป +5 ฿!' }
+        ],
+        weatherIdx: 0,
+        money: 135,
+        rep: 45,
+        sound: true,
+        speed: 1,
+        juiceStock: 3,
+        maxQueue: 3,
+        price: 25,
+        ingredients: { oranges: 15, sugar: 12, ice: 15, cups: 20, cakes: 0 },
+        recipe: { oranges: 2, sugar: 1, ice: 1 },
+        happyHour: false,
+        happyTimer: 0,
+        viralTimer: 0,
+        totalSold: 38,
+        totalEarned: 950,
+        totalVip: 0,
+        totalDine: 0,
+        tables: 0,
+        xp: 38,
+        lvShown: null,
+        bestDay: 0,
+        location: 'ถนนชนบท',
+        locId: 'country',
+        unlockedLoc: { country: true },
+        hasLights: true,
+        autoJuicer: false,
+        hasCatStaff: false,
+        hasDogWaiter: false,
+        upg: { press: 0, cooler: 0, sign: 0 },
+        decor: { plants: false, radio: false, flag: false, umbrella: false, sofa: false, rug: false, fountain: false, lantern: false, luckycat: false },
+        outfit: 'classic',
+        ownedOutfits: { classic: true },
+        boothSkin: 'classic',
+        ownedSkins: { classic: true },
+        ach: {},
+        today: { sold: 0, earned: 0, vip: 0, crafted: 0, lost: 0, spent: 0, dine: 0 },
+        quests: [],
+        event: 'none',
+        eventDone: false,
+        marketDiscount: 1.0,
+        marketEventText: 'ราคาปกติ',
+        lastSavedTime: Date.now()
+    };
+
+    function loadState() {
+        const s = JSON.parse(JSON.stringify(defaultState));
+        let saved = null;
+        try { saved = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) {}
+        if (saved) {
+            for (const k in saved) {
+                const sv = saved[k];
+                if (sv && typeof sv === 'object' && !Array.isArray(sv) && s[k] && typeof s[k] === 'object' && !Array.isArray(s[k])) {
+                    Object.assign(s[k], sv);
+                } else {
+                    s[k] = sv;
+                }
+            }
+        }
+        if (saved && saved.xp === undefined) s.xp = saved.totalSold || 0;
+        s.weatherList = defaultState.weatherList;
+        if (!LOCATIONS[s.locId]) s.locId = 'country';
+        s.location = LOCATIONS[s.locId].name;
+        s.unlockedLoc[s.locId] = true;
+        if (!OUTFITS[s.outfit]) s.outfit = 'classic';
+        if (!BOOTH_SKINS[s.boothSkin]) s.boothSkin = 'classic';
+        s.ownedOutfits.classic = true;
+        s.ownedSkins.classic = true;
+        return s;
+    }
+
+    let state = loadState();
+    let paused = false;
+    let activeMinigameStop = null;
+    if (state.lvShown === null || state.lvShown === undefined) state.lvShown = levelInfo().lv;
+
+    function saveGame() {
+        state.lastSavedTime = Date.now();
+        localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    }
+
+    // ===================== ตัวช่วยคำนวณ =====================
+    const curWeather = () => state.weatherList[state.weatherIdx];
+    const curLoc = () => LOCATIONS[state.locId];
+    const curOutfit = () => OUTFITS[state.outfit] || OUTFITS.classic;
+    const curSkin = () => BOOTH_SKINS[state.boothSkin] || BOOTH_SKINS.classic;
+    const stockCap = () => 10 + 6 * state.upg.cooler;
+    const nightFactor = () => Math.min(1, Math.max(0, (state.minutes - 18 * 60) / 180));
+    const patienceTime = () => 8.5 + (state.decor.plants ? 1.5 : 0) + (state.decor.rug ? 1 : 0) + (state.decor.fountain ? 1 : 0);
+    const addRep = n => { state.rep = Math.max(0, Math.min(100, state.rep + n)); };
+
+    function levelInfo() {
+        let lv = 1;
+        while (state.xp >= 6 * lv * (lv + 1)) lv++;
+        return { lv, cur: state.xp - 6 * (lv - 1) * lv, need: 12 * lv };
+    }
+    function addXp(n) { state.xp += n; }
+
+    function freeTableIdx() {
+        for (let i = 0; i < state.tables; i++) {
+            if (!customers.some(c => c.table === i && (c.state === 'to_table' || c.state === 'dining'))) return i;
+        }
+        return -1;
+    }
+
+    function getWeatherFormulaBonus() {
+        const wId = curWeather().id;
+        if (wId === 'rain' && state.recipe.oranges >= 3 && state.recipe.sugar >= 2) return 8;
+        if (wId === 'sunny' && state.recipe.ice >= 2) return 6;
+        if (wId === 'cloudy' && state.recipe.oranges === 2 && state.recipe.sugar === 2) return 5;
+        return 0;
+    }
+
+    function getTipBonus() {
+        let tip = getWeatherFormulaBonus();
+        if (state.decor.radio) tip += 1;
+        if (state.locId === 'beach' && curWeather().id === 'sunny') tip += 4;
+        if (state.event === 'heat' && state.recipe.ice >= 2) tip += 3;
+        tip += curOutfit().tipBonus;
+        return tip;
+    }
+
+    function eventRate() {
+        const e = EVENTS.find(x => x.id === state.event);
+        return e ? e.rate : 1;
+    }
+
+    // ===================== ภารกิจ & ความสำเร็จ =====================
+    function genQuests() {
+        const d = state.day;
+        const q = [
+            { type: 'sold', target: 8 + Math.min(20, d), reward: 50 },
+            { type: 'earned', target: 150 + d * 8, reward: 70 },
+            (() => { const r = Math.random(); if (r < 0.34) return { type: 'vip', target: 2, reward: 90 }; if (r < 0.68 || state.tables === 0) return { type: 'crafted', target: 8, reward: 45 }; return { type: 'dine', target: 4, reward: 80 }; })()
+        ];
+        return q.map(x => ({ ...x, claimed: false }));
+    }
+    if (!state.quests || state.quests.length === 0) state.quests = genQuests();
+
+    const QUEST_LABEL = {
+        sold: t => `ขายน้ำส้มให้ครบ ${t} แก้ว`,
+        earned: t => `ทำรายได้จากการขายให้ครบ ${t} ฿`,
+        vip: t => `บริการลูกค้า VIP ให้ครบ ${t} คน`,
+        crafted: t => `คั้นน้ำส้มให้ครบ ${t} แก้ว`,
+        dine: t => `มีลูกค้านั่งทานที่ร้านให้ครบ ${t} คน`
+    };
+
+    // ===================== ระบบเสียงเอฟเฟกต์สมบูรณ์ =====================
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playTone(freq, duration = 0.08, type = 'sine', delay = 0, vol = 0.08, slideTo = null) {
+        if (!state.sound) return;
+        try {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const t0 = audioCtx.currentTime + delay;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, t0);
+            if (slideTo) osc.frequency.exponentialRampToValueAtTime(slideTo, t0 + duration);
+            gain.gain.setValueAtTime(vol, t0);
+            gain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(t0);
+            osc.stop(t0 + duration);
+        } catch (e) {}
+    }
+
+    const SFX = {
+        click: () => playTone(540, 0.04, 'triangle', 0, 0.05),
+        squeeze: () => {
+            playTone(300, 0.11, 'sine', 0, 0.08, 620);
+            playTone(520, 0.09, 'sine', 0.07, 0.07, 880);
+        },
+        buy: () => {
+            playTone(587, 0.07, 'triangle', 0, 0.09);
+            playTone(880, 0.12, 'triangle', 0.06, 0.09);
+        },
+        coin: (isVip = false) => {
+            if (isVip) {
+                playTone(784, 0.07, 'sine', 0, 0.1);
+                playTone(988, 0.07, 'sine', 0.06, 0.1);
+                playTone(1175, 0.08, 'sine', 0.12, 0.1);
+                playTone(1568, 0.18, 'triangle', 0.18, 0.12);
+            } else {
+                playTone(988, 0.06, 'sine', 0, 0.09);
+                playTone(1319, 0.14, 'sine', 0.055, 0.1);
+            }
+        },
+        error: () => {
+            playTone(230, 0.11, 'sawtooth', 0, 0.07);
+            playTone(175, 0.15, 'sawtooth', 0.09, 0.07);
+        },
+        fanfare: () => {
+            [523, 659, 784, 1046].forEach((f, idx) => playTone(f, 0.12, 'triangle', idx * 0.07, 0.1));
+        },
+        angry: () => playTone(280, 0.18, 'sawtooth', 0, 0.06, 140)
+    };
+
+    document.addEventListener('click', (e) => {
+        if (audioCtx.resume) audioCtx.resume();
+        if (e.target.closest('button') || e.target.closest('.clickable')) {
+            SFX.click();
+        }
+    });
+
+    function checkAchievements() {
+        const li = levelInfo();
+        while (state.lvShown < li.lv) {
+            state.lvShown++;
+            const r = 40 * state.lvShown;
+            state.money += r;
+            addRep(2);
+            addLog(`🏪 ร้านเลเวลอัป! ถึงเลเวล ${state.lvShown} รับโบนัส +${r} ฿ และชื่อเสียง +2`);
+            SFX.fanfare();
+            saveGame();
+        }
+        ACHS.forEach(a => {
+            if (!state.ach[a.id] && a.ok()) {
+                state.ach[a.id] = true;
+                state.money += a.r;
+                addLog(`🏆 ปลดล็อกความสำเร็จ "${a.t}" รับรางวัล +${a.r} ฿!`);
+                SFX.fanfare();
+                saveGame();
+            }
+        });
+    }
+
+    // ===================== แอนิเมชันตัวละคร =====================
+    const sellerAnim = { squeezeTimer: 0, drops: [] };
+
+    const waiterDog = {
+        x: 610, y: 232, targetX: 610, state: 'idle', walkCycle: 0,
+        carryingJuice: false, dir: 1, targetCustomer: null, speech: '', speechTimer: 0
+    };
+
+    const merchant = {
+        baseX: 815, x: 815, y: 125, dir: 1, walkCycle: 0, armWave: 0, pauseTimer: 0, speech: '', speechTimer: 0,
+        quotes: ['🍊 ส้มสดๆ เพิ่งลงแผงจ้า!', '🛒 คลิกที่ตัวฉันเพื่อซื้อของได้นะ!', '🧊 น้ำแข็งสะอาด เย็นชื่นใจ!', '🍬 น้ำตาลเกรดดี ราคาส่ง!']
+    };
+
+    const floatingTexts = [];
+
+    function addLog(msg) {
+        const box = document.getElementById('log-container');
+        const line = document.createElement('div');
+        line.textContent = `> ${msg}`;
+        box.appendChild(line);
+        box.scrollTop = box.scrollHeight;
+    }
+
+    // ===================== อัปเดต UI =====================
+    function updateUI() {
+        checkAchievements();
+
+        document.getElementById('ui-day').textContent = state.day;
+        const ev = EVENTS.find(x => x.id === state.event);
+        const evTag = ev && ev.id !== 'none' ? ' • ' + ev.text.split(' ')[0] : '';
+        document.getElementById('ui-location').textContent = `${curLoc().icon} ${curLoc().name}${evTag}`;
+
+        let hrs = Math.floor(state.minutes / 60);
+        let mins = Math.floor(state.minutes % 60);
+        document.getElementById('ui-time').textContent = `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+
+        let period = hrs < 12 ? 'เปิดร้าน • ช่วงเช้า' : (hrs < 16 ? 'เปิดร้าน • ช่วงบ่าย' : 'เปิดร้าน • ช่วงเย็น');
+        if (state.viralTimer > 0) period = `🔥 ร้านดังไวรัล! (${Math.ceil(state.viralTimer)}วิ)`;
+        document.getElementById('ui-period').textContent = period;
+
+        let pct = Math.min(100, Math.max(0, ((state.minutes - 360) / (1200 - 360)) * 100));
+        document.getElementById('ui-time-bar').style.width = pct + '%';
+
+        document.getElementById('ui-weather').textContent = curWeather().label;
+        document.getElementById('ui-money').textContent = state.money.toLocaleString();
+        document.getElementById('ui-rep').textContent = state.rep;
+        document.getElementById('ui-rep-bar').style.width = Math.min(100, state.rep) + '%';
+        const li = levelInfo();
+        document.getElementById('ui-level').textContent = li.lv;
+        document.getElementById('ui-xp-bar').style.width = Math.min(100, li.cur / li.need * 100) + '%';
+        document.getElementById('ui-sound').textContent = state.sound ? 'เปิด' : 'ปิด';
+        document.getElementById('ui-speed').textContent = 'x' + state.speed;
+
+        document.getElementById('ui-stock').textContent = `${state.juiceStock}/${stockCap()}`;
+        const waitingCount = customers.filter(c => c.state === 'queue').length;
+        const diners = customers.filter(c => c.state === 'dining').length;
+        document.getElementById('ui-queue').textContent = `${waitingCount}/${state.maxQueue}` + (state.tables > 0 ? ` • 🪑${diners}/${state.tables}` : '');
+
+        const claimable = state.quests.filter(q => !q.claimed && state.today[q.type] >= q.target).length;
+        const dot = document.getElementById('quest-dot');
+        dot.style.display = claimable > 0 ? 'flex' : 'none';
+        dot.textContent = claimable;
+    }
+
+    // ===================== คั้นน้ำส้ม (พ่อค้าแพนด้าทำท่าคั้นน้ำส้ม) =====================
+    function craftJuice(isManual = false) {
+        if (state.juiceStock >= stockCap()) {
+            if (isManual) { SFX.error(); addLog(`⚠️ ตู้แช่เต็มแล้ว (${stockCap()} แก้ว) ขายก่อนหรืออัปเกรดตู้แช่!`); }
+            return false;
+        }
+        if (
+            state.ingredients.oranges >= state.recipe.oranges &&
+            state.ingredients.sugar >= state.recipe.sugar &&
+            state.ingredients.ice >= state.recipe.ice &&
+            state.ingredients.cups >= 1
+        ) {
+            state.ingredients.oranges -= state.recipe.oranges;
+            state.ingredients.sugar -= state.recipe.sugar;
+            state.ingredients.ice -= state.recipe.ice;
+            state.ingredients.cups -= 1;
+            let made = 1;
+            if (isManual && Math.random() < 0.15 * state.upg.press && state.juiceStock + 1 < stockCap()) {
+                made = 2;
+                addLog('✨ เครื่องเทอร์โบทำงานดี! ได้น้ำส้มโบนัสฟรี 1 แก้ว');
+            }
+            state.juiceStock += made;
+            state.today.crafted += made;
+
+            sellerAnim.squeezeTimer = 0.75;
+            for (let i = 0; i < 8; i++) {
+                sellerAnim.drops.push({ x: 612 + (Math.random() * 10 - 5), y: 145, vx: (Math.random() - 0.5) * 35, vy: -30 - Math.random() * 25, life: 0.45 });
+            }
+
+            if (isManual) SFX.squeeze();
+            floatingTexts.push({ x: 610, y: 110, text: `🐼 คั้นสด +${made} 🧃`, color: '#86efac', alpha: 1 });
+            if (isManual) addLog(`🐼 พ่อค้าแพนด้าคั้นน้ำส้มสดใหม่ ${made} แก้ว! (สต็อกพร้อมขาย: ${state.juiceStock} แก้ว)`);
+            updateUI();
+            saveGame();
+            return true;
+        } else {
+            if (isManual) {
+                SFX.error();
+                addLog(`⚠️ วัตถุดิบไม่พอ! คลิกที่พ่อค้าตลาด 🛒 เพื่อซื้อส้ม/น้ำตาล/น้ำแข็ง/แก้วเพิ่ม`);
+            }
+            return false;
+        }
+    }
+
+    function cycleWeather() {
+        state.weatherIdx = (state.weatherIdx + 1) % state.weatherList.length;
+        addLog(`สภาพอากาศเปลี่ยนเป็น ${curWeather().label} (${curWeather().hint})`);
+        updateUI();
+    }
+
+    function toggleSound() { state.sound = !state.sound; updateUI(); }
+    function toggleSpeed() { state.speed = state.speed === 1 ? 2 : (state.speed === 2 ? 4 : 1); updateUI(); }
+
+    function triggerHappyHour() {
+        if (state.happyHour) return;
+        if (state.money < 30) { SFX.error(); addLog('เงินสดไม่พอสำหรับจัดโปรโมชัน Happy Hour (ใช้ 30 ฿)'); return; }
+        state.money -= 30;
+        state.today.spent += 30;
+        state.happyHour = true;
+        state.happyTimer = 15;
+        document.getElementById('btn-happy').classList.add('active');
+        SFX.fanfare();
+        addLog('🎉 เริ่มต้นช่วง Happy Hour! ลูกค้าเดินเข้าร้านไวขึ้น 2 เท่า!');
+        spawnCustomer(true);
+        updateUI();
+    }
+
+    // ===================== ข้ามวัน + สรุปผล + อีเวนต์ =====================
+    function pickEvent() {
+        const total = EVENTS.reduce((s, e) => s + e.w, 0);
+        let r = Math.random() * total;
+        for (const e of EVENTS) { r -= e.w; if (r <= 0) return e; }
+        return EVENTS[0];
+    }
+
+    function skipToNextDay() {
+        const t = state.today;
+        const prevDay = state.day;
+
+        let questBonus = 0;
+        state.quests.forEach(q => {
+            if (!q.claimed && t[q.type] >= q.target) { q.claimed = true; questBonus += q.reward; }
+        });
+        state.money += questBonus;
+
+        const rent = Math.min(state.money, curLoc().rent);
+        state.money -= rent;
+        const net = t.earned - t.spent - rent + questBonus;
+        const isBest = t.earned > state.bestDay;
+        if (isBest) state.bestDay = t.earned;
+
+        const summaryHTML = `
+            <div class="item-row"><span>🧃 ขายได้</span><strong>${t.sold} แก้ว</strong></div>
+            <div class="item-row"><span>🪑 ลูกค้านั่งทานที่ร้าน</span><strong>${t.dine} คน</strong></div>
+            <div class="item-row"><span>💰 รายได้จากการขาย</span><strong style="color:#16a34a;">+${t.earned} ฿</strong></div>
+            <div class="item-row"><span>🛒 ซื้อวัตถุดิบ / โปรโมชัน</span><strong style="color:#dc2626;">-${t.spent} ฿</strong></div>
+            <div class="item-row"><span>🏠 ค่าเช่าที่ (${curLoc().name})</span><strong style="color:#dc2626;">-${rent} ฿</strong></div>
+            <div class="item-row"><span>🎯 รางวัลภารกิจ (จ่ายอัตโนมัติ)</span><strong style="color:#16a34a;">+${questBonus} ฿</strong></div>
+            <div class="item-row"><span>😞 ลูกค้าที่เสียไป</span><strong>${t.lost} คน</strong></div>
+            <div class="item-row ${net >= 0 ? 'done' : ''}"><span><strong>กำไรสุทธิวันนี้</strong></span><strong>${net >= 0 ? '+' : ''}${net} ฿</strong></div>
+            ${isBest && t.earned > 0 ? '<div class="badge-hint">🏅 ทำลายสถิติรายได้ต่อวันสูงสุดใหม่!</div>' : ''}
+        `;
+
+        state.day += 1;
+        state.minutes = 8 * 60;
+        state.weatherIdx = Math.floor(Math.random() * state.weatherList.length);
+        state.today = { sold: 0, earned: 0, vip: 0, crafted: 0, lost: 0, spent: 0, dine: 0 };
+        state.quests = genQuests();
+        state.eventDone = false;
+
+        const roll = Math.random();
+        if (roll < 0.35) {
+            state.marketDiscount = 0.65;
+            state.marketEventText = '🔥 ส้มล้นตลาด! ลดราคาวัตถุดิบทั้งหมด 35%!';
+            merchant.speech = '🔥 วันนี้ลดราคา 35% จ้า!';
+            merchant.speechTimer = 6;
+        } else if (roll > 0.8) {
+            state.marketDiscount = 1.25;
+            state.marketEventText = '📈 วัตถุดิบขาดตลาด ราคาปรับขึ้น 25%';
+            merchant.speech = '📦 วันนี้ของหายากนิดนึงนะ!';
+            merchant.speechTimer = 5;
+        } else {
+            state.marketDiscount = 1.0;
+            state.marketEventText = 'ราคาตลาดปกติ';
+        }
+
+        const ev = pickEvent();
+        state.event = ev.id;
+
+        customers.length = 0;
+        waiterDog.state = 'idle';
+        waiterDog.carryingJuice = false;
+
+        SFX.fanfare();
+        addLog(`☀️ เริ่มต้นเช้าวันที่ ${state.day} (${curWeather().label}) - ${state.marketEventText}`);
+        if (ev.id !== 'none') addLog(ev.text);
+        if (ev.burst) for (let i = 0; i < ev.burst; i++) setTimeout(() => spawnCustomer(), 700 * (i + 1));
+
+        updateUI();
+        saveGame();
+        showModal(`🌙 สรุปผลวันที่ ${prevDay}`, summaryHTML + (ev.id !== 'none' ? `<div class="badge-hint" style="margin-top:12px;">📣 พรุ่งนี้: ${ev.text}</div>` : ''));
+        paused = true;
+    }
+
+    // ===================== เมนูป๊อปอัป =====================
+    function showModal(title, html) {
+        if (activeMinigameStop) { activeMinigameStop(); activeMinigameStop = null; }
+        document.getElementById('modalBackdrop').style.display = 'flex';
+        document.getElementById('modalTitle').textContent = title;
+        document.getElementById('modalContent').innerHTML = html;
+    }
+
+    function upCost(key) { return UPGRADES[key].base * (state.upg[key] + 1); }
+
+    function openMenu(type) {
+        let title = '', html = '';
+
+        if (type === 'inventory') {
+            title = '📦 คลังสินค้า & วัตถุดิบ';
+            html = `
+                <div class="item-row"><span>🍊 ส้มสด</span><strong>${state.ingredients.oranges} ลูก</strong></div>
+                <div class="item-row"><span>🍬 น้ำตาลทราย</span><strong>${state.ingredients.sugar} ช้อน</strong></div>
+                <div class="item-row"><span>🧊 น้ำแข็งอนามัย</span><strong>${state.ingredients.ice} ก้อน</strong></div>
+                <div class="item-row"><span>🥤 แก้วพลาสติก</span><strong>${state.ingredients.cups} ใบ</strong></div>
+                <div class="item-row"><span>🧃 น้ำส้มพร้อมขาย (ตู้แช่จุได้ ${stockCap()})</span><strong>${state.juiceStock} แก้ว</strong></div>
+                <div class="item-row"><span>🍰 เค้กส้ม (ไว้เสิร์ฟลูกค้านั่งทาน)</span><strong>${state.ingredients.cakes} ชิ้น</strong></div>`;
+        } else if (type === 'market') {
+            const pOrange = Math.round(25 * state.marketDiscount);
+            const pSugar = Math.round(15 * state.marketDiscount);
+            const pIce = Math.round(10 * state.marketDiscount);
+            const pCups = Math.round(15 * state.marketDiscount);
+            const pCake = Math.round(36 * state.marketDiscount);
+            title = '📈 ตลาดค้าส่งวัตถุดิบ';
+            html = `
+                <div class="badge-hint" style="margin-bottom:10px;">📢 สถานการณ์ตลาดวันนี้: <strong>${state.marketEventText}</strong></div>
+                <div class="item-row"><span>🍊 ส้มสด (แพ็ก 10 ลูก) - <strong>${pOrange} ฿</strong></span><button class="buy-action-btn" onclick="buyIng('oranges', 10, ${pOrange})">ซื้อ</button></div>
+                <div class="item-row"><span>🍬 น้ำตาล (แพ็ก 10 ช้อน) - <strong>${pSugar} ฿</strong></span><button class="buy-action-btn" onclick="buyIng('sugar', 10, ${pSugar})">ซื้อ</button></div>
+                <div class="item-row"><span>🧊 น้ำแข็ง (แพ็ก 15 ก้อน) - <strong>${pIce} ฿</strong></span><button class="buy-action-btn" onclick="buyIng('ice', 15, ${pIce})">ซื้อ</button></div>
+                <div class="item-row"><span>🥤 แก้วน้ำ (แพ็ก 20 ใบ) - <strong>${pCups} ฿</strong></span><button class="buy-action-btn" onclick="buyIng('cups', 20, ${pCups})">ซื้อ</button></div>
+                <div class="item-row"><span>🍰 เค้กส้ม (แพ็ก 6 ชิ้น) - <strong>${pCake} ฿</strong><small>ลูกค้านั่งทานสั่งเพิ่ม +18 ฿ ต่อชิ้น</small></span><button class="buy-action-btn" onclick="buyIng('cakes', 6, ${pCake})">ซื้อ</button></div>`;
+        } else if (type === 'recipe') {
+            const bonus = getWeatherFormulaBonus();
+            title = '📜 ปรับแต่งสูตรน้ำส้ม (ต่อ 1 แก้ว)';
+            html = `
+                <div class="item-row"><span>🍊 ปริมาณส้ม: <strong>${state.recipe.oranges}</strong> ลูก</span><div><button class="buy-action-btn" onclick="adjRecipe('oranges', -1)">-</button> <button class="buy-action-btn" onclick="adjRecipe('oranges', 1)">+</button></div></div>
+                <div class="item-row"><span>🍬 ความหวาน (น้ำตาล): <strong>${state.recipe.sugar}</strong> ช้อน</span><div><button class="buy-action-btn" onclick="adjRecipe('sugar', -1)">-</button> <button class="buy-action-btn" onclick="adjRecipe('sugar', 1)">+</button></div></div>
+                <div class="item-row"><span>🧊 น้ำแข็ง: <strong>${state.recipe.ice}</strong> ก้อน</span><div><button class="buy-action-btn" onclick="adjRecipe('ice', -1)">-</button> <button class="buy-action-btn" onclick="adjRecipe('ice', 1)">+</button></div></div>
+                <div class="badge-hint">
+                    💡 <strong>${curWeather().hint}</strong><br>
+                    สถานะสูตรปัจจุบัน: ${bonus > 0 ? `<span style="color:#15803d;font-weight:bold;">✅ ตรงใจลูกค้า! รับทิปเพิ่ม +${bonus} ฿ ต่อแก้ว</span>` : '⚪ สูตรทั่วไป (ยังไม่ได้โบนัสสภาพอากาศ)'}
+                    <br>🐻 <em>หมีนักวิจารณ์</em> จะจ่าย x1.5 และเพิ่มชื่อเสียงถ้าสูตรตรงใจ แต่ถ้าไม่ตรงจะลดชื่อเสียง!
+                </div>`;
+        } else if (type === 'price') {
+            const loc = curLoc();
+            const typical = Math.round(loc.tol + state.rep * 0.2);
+            title = '🏷️ ตั้งราคาขาย';
+            html = `
+                <div class="item-row"><span>ราคาขายพื้นฐาน: <strong>${state.price} ฿ / แก้ว</strong></span><div><button class="buy-action-btn" onclick="changePrice(-5)">-5 ฿</button> <button class="buy-action-btn" onclick="changePrice(5)">+5 ฿</button></div></div>
+                <div class="badge-hint">ทิปปัจจุบัน (รวมชุดแพนด้าเชฟ): <strong>+${getTipBonus()} ฿ / แก้ว</strong></div>
+                <div class="badge-hint">📊 ลูกค้าทั่วไปที่ ${loc.name} ยอมจ่ายประมาณ <strong>${typical} ฿</strong> (±) — ตั้งสูงกว่านี้ลูกค้าจะเดินหนี!<br>
+                ราคาต่ำกว่า 20 ฿ ดึงลูกค้าเพิ่ม 25% / ราคาสูงกว่า 30 ฿ ลูกค้าลด 15%<br>
+                ลูกค้า VIP ยอมจ่ายแพงกว่าปกติ ส่วนลูกกระต่ายมีงบน้อย</div>`;
+        } else if (type === 'upgrade') {
+            title = '⬆️ อัปเกรดร้าน & จ้างพนักงาน';
+            const queueCost = 80 + 60 * (state.maxQueue - 3);
+            const queueMax = state.maxQueue >= 8;
+            html = `
+                <div class="item-row"><span>👥 ขยายพื้นที่คิว (รับได้ ${state.maxQueue}/8 คิว)<small>ราคา ${queueMax ? '-' : queueCost + ' ฿'}</small></span><button class="buy-action-btn" onclick="upgradeQueue()" ${queueMax ? 'disabled' : ''}>${queueMax ? 'เต็มแล้ว' : 'อัปเกรด'}</button></div>
+                <div class="item-row"><span>⚙️ เครื่องคั้นน้ำส้มอัตโนมัติ<small>ช่วยแพนด้าเชฟคั้นอัตโนมัติ - 120 ฿</small></span><button class="buy-action-btn" onclick="buyAutoJuicer()" ${state.autoJuicer ? 'disabled' : ''}>${state.autoJuicer ? 'ติดตั้งแล้ว' : 'ซื้อ'}</button></div>
+                <div class="item-row"><span>🐱 "น้องแมวบาริสต้า"<small>ช่วยคั้นในซุ้ม - 180 ฿</small></span><button class="buy-action-btn" onclick="hireCatStaff()" ${state.hasCatStaff ? 'disabled' : ''}>${state.hasCatStaff ? 'จ้างแล้ว' : 'จ้างงาน'}</button></div>
+                <div class="item-row">
+                    <span style="display:flex; align-items:center;">
+                        <img src="${DOG_URI}" class="pom-icon" alt="Pomeranian">
+                        <div>"น้องหมาปอมเด็กเสิร์ฟ"<small>วิ่งถือแก้วน้ำส้มเสิร์ฟหน้าร้านไวสุดๆ - 220 ฿</small></div>
+                    </span>
+                    <button class="buy-action-btn" onclick="hireDogWaiter()" ${state.hasDogWaiter ? 'disabled' : ''}>${state.hasDogWaiter ? 'จ้างแล้ว' : 'จ้างงาน'}</button>
+                </div>
+                <div class="section-title">🔧 อัปเกรดอุปกรณ์ร้าน (หลายเลเวล)</div>
+                ${Object.keys(UPGRADES).map(k => {
+                    const u = UPGRADES[k], lv = state.upg[k], maxed = lv >= u.max;
+                    return `<div class="item-row"><span>${u.label} Lv.${lv}/${u.max}<small>${u.desc} - ${maxed ? 'เต็มเลเวล' : upCost(k) + ' ฿'}</small></span><button class="buy-action-btn" onclick="buyUpgrade('${k}')" ${maxed ? 'disabled' : ''}>${maxed ? 'MAX' : 'อัปเกรด'}</button></div>`;
+                }).join('')}`;
+        } else if (type === 'location') {
+            title = '🗺️ ย้ายทำเลที่ตั้ง';
+            html = Object.keys(LOCATIONS).map(id => {
+                const l = LOCATIONS[id];
+                const here = state.locId === id;
+                const owned = state.unlockedLoc[id];
+                return `<div class="item-row ${here ? 'done' : ''}"><span>${l.icon} ${l.name}<small>${l.desc}${owned ? '' : ' • ปลดล็อก ' + l.cost + ' ฿'}</small></span>
+                    <button class="buy-action-btn" onclick="moveLoc('${id}')" ${here ? 'disabled' : ''}>${here ? 'อยู่ที่นี่' : (owned ? 'ย้ายไป' : 'ปลดล็อก')}</button></div>`;
+            }).join('') + `<div class="badge-hint">ปลดล็อกครั้งเดียว จากนั้นย้ายไปมาได้ฟรี แต่ต้องจ่ายค่าเช่ารายวัน ทำเลดีมีลูกค้าเยอะ และยอมจ่ายแพงขึ้น</div>`;
+        } else if (type === 'minigame') {
+            title = '🎮 ศูนย์รวมมินิเกมมหาสนุก';
+            html = `
+                <div class="item-row">
+                    <span>🍊 <strong>เขย่าต้นส้มรับโชค</strong><small>สุ่มรับส้มสด 1-4 ลูก หรือลุ้นเจอส้มทองคำ (+40~80 ฿)</small></span>
+                    <button class="buy-action-btn" onclick="playMinigame()">เขย่าเลย!</button>
+                </div>
+                <div class="item-row">
+                    <span>🧺 <strong>เกมรับส้มหล่น (15 วินาที)</strong><small>เลื่อนตะกร้ารับส้มสดและส้มทองคำ ระวังระเบิด 💣!</small></span>
+                    <button class="equip-btn" onclick="startCatchMinigame()">เริ่มเล่น</button>
+                </div>
+                <div class="item-row">
+                    <span>⚡ <strong>รัวนิ้วคั้นส้มเทอร์โบ (10 วินาที)</strong><small>กดรัวๆ แข่งกับเวลา ยิ่งกดได้มากยิ่งได้โบนัสเงินสดเยอะ!</small></span>
+                    <button class="equip-btn" onclick="startMashMinigame()">เริ่มเล่น</button>
+                </div>
+            `;
+        } else if (type === 'quest') {
+            title = '🎯 ภารกิจรายวัน & ความสำเร็จ';
+            html = `<div class="section-title" style="margin-top:0;">📅 ภารกิจวันนี้ (รีเซ็ตทุกเช้า)</div>` +
+                state.quests.map((q, i) => {
+                    const prog = Math.min(state.today[q.type], q.target);
+                    const ready = !q.claimed && prog >= q.target;
+                    return `<div class="item-row ${q.claimed ? 'done' : ''}"><span>${QUEST_LABEL[q.type](q.target)}<small>ความคืบหน้า ${prog}/${q.target}</small></span>
+                        <button class="buy-action-btn" ${ready ? '' : 'disabled'} onclick="claimQuest(${i})">${q.claimed ? 'รับแล้ว ✓' : 'รับ ' + q.reward + ' ฿'}</button></div>`;
+                }).join('') +
+                `<div class="section-title">🏆 ความสำเร็จ (${ACHS.filter(a => state.ach[a.id]).length}/${ACHS.length})</div>` +
+                ACHS.map(a => `<div class="item-row ${state.ach[a.id] ? 'done' : ''}"><span>${a.t}</span><strong>${state.ach[a.id] ? '✓ ได้รับแล้ว' : '+' + a.r + ' ฿'}</strong></div>`).join('');
+        } else if (type === 'decor') {
+            title = '🛋️ ตกแต่งร้าน & แต่งตัวพ่อค้าแพนด้า';
+            html = `
+                <div class="section-title" style="margin-top:0;">🐼 ชุดแต่งกายพ่อค้าแพนด้าเชฟ</div>
+                ${Object.keys(OUTFITS).map(k => {
+                    const o = OUTFITS[k], owned = state.ownedOutfits[k], active = state.outfit === k;
+                    return `<div class="item-row ${active ? 'done' : ''}">
+                        <span>${o.label}<small>${o.desc}${owned ? '' : ' • ราคา ' + o.cost + ' ฿'}</small></span>
+                        ${active ? '<button class="buy-action-btn" disabled>สวมใส่อยู่</button>' :
+                          (owned ? `<button class="equip-btn" onclick="selectOutfit('${k}')">สวมใส่</button>` :
+                                   `<button class="buy-action-btn" onclick="selectOutfit('${k}')">ซื้อ ${o.cost} ฿</button>`)}
+                    </div>`;
+                }).join('')}
+
+                <div class="section-title">🏪 สกินซุ้มร้านค้า</div>
+                ${Object.keys(BOOTH_SKINS).map(k => {
+                    const s = BOOTH_SKINS[k], owned = state.ownedSkins[k], active = state.boothSkin === k;
+                    return `<div class="item-row ${active ? 'done' : ''}">
+                        <span>${s.label}<small>${s.desc}${owned ? '' : ' • ราคา ' + s.cost + ' ฿'}</small></span>
+                        ${active ? '<button class="buy-action-btn" disabled>ใช้งานอยู่</button>' :
+                          (owned ? `<button class="equip-btn" onclick="selectBoothSkin('${k}')">ใช้งาน</button>` :
+                                   `<button class="buy-action-btn" onclick="selectBoothSkin('${k}')">ซื้อ ${s.cost} ฿</button>`)}
+                    </div>`;
+                }).join('')}
+
+                <div class="section-title">🪴 ของตกแต่งบริเวณร้าน</div>
+                <div class="item-row"><span>💡 ไฟราวประดับซุ้มร้าน<small>สวยตอนกลางคืน และดึงลูกค้าเพิ่ม 10% ช่วงค่ำ</small></span><button class="buy-action-btn" onclick="state.hasLights=!state.hasLights; openMenu('decor');">${state.hasLights ? 'ปิด' : 'เปิด'}</button></div>` +
+                Object.keys(DECOR).map(k => {
+                    const d = DECOR[k], owned = state.decor[k];
+                    return `<div class="item-row ${owned ? 'done' : ''}"><span>${d.label}<small>${d.desc}${owned ? '' : ' - ' + d.cost + ' ฿'}</small></span><button class="buy-action-btn" onclick="buyDecor('${k}')" ${owned ? 'disabled' : ''}>${owned ? 'ติดตั้งแล้ว' : 'ซื้อ'}</button></div>`;
+                }).join('');
+        } else if (type === 'tables') {
+            title = '🪑 โต๊ะนั่งทานในร้าน';
+            const li = levelInfo();
+            const n = state.tables, max = TABLE_SPOTS.length;
+            const needLv = n + 2, cost = n < max ? TABLE_COST[n] : 0;
+            const locked = n < max && li.lv < needLv;
+            html = `
+                <div class="badge-hint" style="margin:0 0 10px;">🍽️ หลังรับน้ำส้ม ลูกค้า 65% จะเลือกนั่งทานที่โต๊ะว่าง นั่งประมาณ 10-15 วินาที แล้วจ่ายเงินเพิ่ม (+18 ฿ ถ้ามีเค้ก / +6 ฿ ถ้าไม่มี) พร้อมได้ XP เพิ่ม</div>
+                <div class="item-row"><span>🪑 โต๊ะที่มี ${n}/${max}<small>${n < max ? `โต๊ะถัดไป ${cost} ฿ • ต้องเลเวลร้าน ${needLv} (ตอนนี้ Lv.${li.lv})` : 'ครบทุกโต๊ะแล้ว'}</small></span>
+                    <button class="buy-action-btn" onclick="buyTable()" ${n >= max || locked ? 'disabled' : ''}>${n >= max ? 'ครบแล้ว' : (locked ? 'ล็อก Lv.' + needLv : 'ซื้อโต๊ะ')}</button></div>
+                <div class="item-row"><span>🍰 เค้กส้มในคลัง<small>ซื้อได้ที่ตลาดค้าส่ง</small></span><strong>${state.ingredients.cakes} ชิ้น</strong></div>
+                <div class="item-row"><span>🍽️ ลูกค้านั่งทานแล้วทั้งหมด</span><strong>${state.totalDine} คน</strong></div>
+                <div class="badge-hint">🛋️ ซื้อโซฟาในเมนูตกแต่งเพื่อให้ลูกค้านั่งทานจ่ายเพิ่ม +50%</div>`;
+        } else if (type === 'stats') {
+            title = '📊 สถิติร้านขายน้ำส้ม';
+            const staffHTML = (state.hasCatStaff ? '🐱 แมวบาริสต้า ' : '') +
+                              (state.hasDogWaiter ? `<img src="${DOG_URI}" style="height:24px;vertical-align:middle;"> ปอมเด็กเสิร์ฟ` : '') || 'ยังไม่มี';
+            html = `
+                <div class="item-row"><span>จำนวนแก้วที่ขายได้ทั้งหมด</span><strong>${state.totalSold} แก้ว</strong></div>
+                <div class="item-row"><span>รายได้สะสมทั้งหมด</span><strong>${state.totalEarned} ฿</strong></div>
+                <div class="item-row"><span>รายได้วันที่ดีที่สุด</span><strong>${state.bestDay} ฿</strong></div>
+                <div class="item-row"><span>เลเวลร้าน</span><strong>Lv.${levelInfo().lv} (${state.xp} XP)</strong></div>
+                <div class="item-row"><span>ลูกค้านั่งทานที่ร้านแล้ว</span><strong>${state.totalDine} คน</strong></div>
+                <div class="item-row"><span>ลูกค้า VIP ที่บริการแล้ว</span><strong>${state.totalVip} คน</strong></div>
+                <div class="item-row"><span>ระดับชื่อเสียงร้าน</span><strong>${state.rep} คะแนน</strong></div>
+                <div class="item-row"><span>ทำเลปัจจุบัน</span><strong>${curLoc().icon} ${curLoc().name}</strong></div>
+                <div class="item-row"><span>ชุดแพนด้าเชฟ / สกินซุ้ม</span><strong>${curOutfit().label} / ${curSkin().label}</strong></div>
+                <div class="item-row"><span>พนักงานในร้าน</span><strong>${staffHTML}</strong></div>
+                <div class="item-row"><span>ความสำเร็จที่ปลดล็อก</span><strong>${ACHS.filter(a => state.ach[a.id]).length}/${ACHS.length}</strong></div>
+                <div style="margin-top:15px; text-align:right;"><button class="close-btn" onclick="resetSave()">ล้างเซฟเริ่มใหม่</button></div>`;
+        }
+
+        showModal(title, html);
+    }
+
+    function selectOutfit(key) {
+        const o = OUTFITS[key];
+        if (!state.ownedOutfits[key]) {
+            if (state.money < o.cost) { SFX.error(); addLog('เงินสดไม่พอซื้อชุดแต่งกายนี้!'); return; }
+            state.money -= o.cost;
+            state.ownedOutfits[key] = true;
+            SFX.buy();
+            addLog(`🐼 ซื้อและสวมใส่ "${o.label}" เรียบร้อย!`);
+        } else {
+            SFX.click();
+            addLog(`🐼 เปลี่ยนเป็น "${o.label}" เรียบร้อย!`);
+        }
+        state.outfit = key;
+        updateUI(); saveGame(); openMenu('decor');
+    }
+
+    function selectBoothSkin(key) {
+        const s = BOOTH_SKINS[key];
+        if (!state.ownedSkins[key]) {
+            if (state.money < s.cost) { SFX.error(); addLog('เงินสดไม่พอซื้อสกินซุ้มร้านนี้!'); return; }
+            state.money -= s.cost;
+            state.ownedSkins[key] = true;
+            SFX.buy();
+            addLog(`🏪 ซื้อและเปลี่ยนเป็น "${s.label}" เรียบร้อย!`);
+        } else {
+            SFX.click();
+            addLog(`🏪 เปลี่ยนซุ้มเป็น "${s.label}" เรียบร้อย!`);
+        }
+        state.boothSkin = key;
+        updateUI(); saveGame(); openMenu('decor');
+    }
+
+    // ===================== มินิเกม =====================
+    function playMinigame() {
+        if (Math.random() < 0.08) {
+            const gold = 40 + Math.floor(Math.random() * 40);
+            state.money += gold;
+            addLog(`🌟 เจอส้มทองคำ! ขายได้ +${gold} ฿!`);
+            SFX.fanfare();
+        } else {
+            const got = Math.floor(Math.random() * 4) + 1;
+            state.ingredients.oranges += got;
+            SFX.buy();
+            addLog(`🍊 เขย่าต้นส้ม ได้รับส้มสดฟรี +${got} ลูก!`);
+        }
+        updateUI();
+        saveGame();
+        closeModal();
+    }
+
+    function startCatchMinigame() {
+        showModal('🧺 เกมรับส้มหล่น (ขยับเมาส์ซ้าย-ขวา)', `
+            <div style="display:flex; justify-content:space-between; font-weight:bold;">
+                <span>🍊 ส้มที่เก็บได้: <span id="mg-oranges" class="green-val">0</span></span>
+                <span>🪙 โบนัส: <span id="mg-gold" style="color:#d97706;">0</span> ฿</span>
+                <span>⏳ เวลา: <span id="mg-time">15</span> วิ</span>
+            </div>
+            <canvas id="minigameCanvas" width="460" height="270"></canvas>
+            <div class="badge-hint" style="text-align:center;">เลื่อนเมาส์หรือนิ้วบนกรอบฟ้าเพื่อขยับตะกร้ารับ 🍊 และ 🌟 (ห้ามโดน 💣)</div>
+        `);
+
+        const mc = document.getElementById('minigameCanvas');
+        const mctx = mc.getContext('2d');
+        let basketX = 195;
+        let gotOranges = 0, gotGold = 0;
+        let timeLeft = 15;
+        let items = [];
+        let spawnT = 0;
+        let running = true;
+        let lastT = performance.now();
+
+        const moveHandler = (clientX) => {
+            const r = mc.getBoundingClientRect();
+            const x = (clientX - r.left) * (mc.width / r.width);
+            basketX = Math.max(0, Math.min(mc.width - 70, x - 35));
+        };
+        mc.addEventListener('mousemove', e => moveHandler(e.clientX));
+        mc.addEventListener('touchmove', e => { if (e.touches[0]) moveHandler(e.touches[0].clientX); });
+
+        activeMinigameStop = () => { running = false; };
+
+        function mgLoop(now) {
+            if (!running) return;
+            const dt = Math.min(0.1, (now - lastT) / 1000);
+            lastT = now;
+            timeLeft -= dt;
+            spawnT += dt;
+
+            if (spawnT >= 0.42) {
+                spawnT = 0;
+                const r = Math.random();
+                const kind = r < 0.14 ? 'gold' : (r < 0.30 ? 'bomb' : 'orange');
+                items.push({ x: 20 + Math.random() * (mc.width - 40), y: -15, vy: 135 + Math.random() * 85, kind });
+            }
+
+            mctx.clearRect(0, 0, mc.width, mc.height);
+            mctx.fillStyle = '#4ade80';
+            mctx.fillRect(0, mc.height - 22, mc.width, 22);
+
+            mctx.fillStyle = '#92400e';
+            mctx.fillRect(basketX, mc.height - 40, 70, 20);
+            mctx.strokeStyle = '#fde047';
+            mctx.lineWidth = 2;
+            mctx.strokeRect(basketX + 2, mc.height - 38, 66, 16);
+
+            mctx.font = '22px sans-serif';
+            for (let i = items.length - 1; i >= 0; i--) {
+                const it = items[i];
+                it.y += it.vy * dt;
+                const icon = it.kind === 'gold' ? '🌟' : (it.kind === 'bomb' ? '💣' : '🍊');
+                mctx.fillText(icon, it.x - 11, it.y);
+
+                if (it.y >= mc.height - 42 && it.y <= mc.height - 15 && it.x >= basketX - 5 && it.x <= basketX + 75) {
+                    if (it.kind === 'orange') { gotOranges++; SFX.squeeze(); }
+                    else if (it.kind === 'gold') { gotGold += 15; SFX.coin(true); }
+                    else { gotOranges = Math.max(0, gotOranges - 2); SFX.error(); }
+                    items.splice(i, 1);
+                } else if (it.y > mc.height + 20) {
+                    items.splice(i, 1);
+                }
+            }
+
+            const oEl = document.getElementById('mg-oranges');
+            if (oEl) {
+                oEl.textContent = gotOranges;
+                document.getElementById('mg-gold').textContent = gotGold;
+                document.getElementById('mg-time').textContent = Math.max(0, Math.ceil(timeLeft));
+            }
+
+            if (timeLeft <= 0) {
+                running = false;
+                state.ingredients.oranges += gotOranges;
+                state.money += gotGold;
+                SFX.fanfare();
+                addLog(`🧺 จบมินิเกมรับส้ม! ได้ส้มสด +${gotOranges} ลูก และโบนัส +${gotGold} ฿`);
+                updateUI(); saveGame();
+                showModal('🎉 สรุปผลมินิเกมรับส้มหล่น', `
+                    <div class="item-row done"><span>🍊 ส้มสดที่เก็บได้</span><strong>+${gotOranges} ลูก</strong></div>
+                    <div class="item-row done"><span>🪙 เงินโบนัสส้มทองคำ</span><strong>+${gotGold} ฿</strong></div>
+                    <button class="buy-action-btn" style="width:100%; padding:10px; margin-top:10px;" onclick="openMenu('minigame')">กลับหน้ารวมมินิเกม</button>
+                `);
+                return;
+            }
+            requestAnimationFrame(mgLoop);
+        }
+        requestAnimationFrame(mgLoop);
+    }
+
+    function startMashMinigame() {
+        let count = 0;
+        let timeLeft = 10;
+        let running = true;
+
+        showModal('⚡ รัวนิ้วคั้นส้มเทอร์โบ!', `
+            <div style="text-align:center; padding:10px;">
+                <div style="font-size:1.2rem; margin-bottom:8px;">⏳ เวลาเหลือ: <strong id="mash-time">10.0</strong> วินาที</div>
+                <div style="font-size:2rem; color:#16a34a; font-weight:bold; margin:12px 0;">กดได้: <span id="mash-count">0</span> ครั้ง</div>
+                <button id="mash-btn" class="buy-action-btn" style="width:100%; padding:22px; font-size:1.35rem; background:linear-gradient(to bottom,#f97316,#ea580c);">🍊 กดรัวๆ ตรงนี้เลย! 🍊</button>
+                <div class="badge-hint" style="margin-top:12px;">ทุกๆ การกด 1 ครั้ง = รับเงินรางวัล +2 ฿ และทุก 5 ครั้งได้ส้มสดฟรี 1 ลูก!</div>
+            </div>
+        `);
+
+        const btn = document.getElementById('mash-btn');
+        btn.onclick = () => {
+            if (!running) return;
+            count++;
+            SFX.squeeze();
+            document.getElementById('mash-count').textContent = count;
+        };
+
+        const timer = setInterval(() => {
+            if (!running) { clearInterval(timer); return; }
+            timeLeft -= 0.1;
+            const tEl = document.getElementById('mash-time');
+            if (tEl) tEl.textContent = Math.max(0, timeLeft).toFixed(1);
+            if (timeLeft <= 0) {
+                running = false;
+                clearInterval(timer);
+                const rewardMoney = count * 2;
+                const rewardOranges = Math.floor(count / 5);
+                state.money += rewardMoney;
+                state.ingredients.oranges += rewardOranges;
+                SFX.fanfare();
+                addLog(`⚡ รัวนิ้วคั้นส้มได้ ${count} ครั้ง! รับเงิน +${rewardMoney} ฿ และส้ม +${rewardOranges} ลูก`);
+                updateUI(); saveGame();
+                showModal('🏆 สรุปผลรัวนิ้วคั้นส้มเทอร์โบ', `
+                    <div class="item-row done"><span>👆 จำนวนที่กดได้</span><strong>${count} ครั้ง</strong></div>
+                    <div class="item-row done"><span>🪙 เงินรางวัลที่ได้</span><strong>+${rewardMoney} ฿</strong></div>
+                    <div class="item-row done"><span>🍊 ส้มสดโบนัส</span><strong>+${rewardOranges} ลูก</strong></div>
+                    <button class="buy-action-btn" style="width:100%; padding:10px; margin-top:10px;" onclick="openMenu('minigame')">กลับหน้ารวมมินิเกม</button>
+                `);
+            }
+        }, 100);
+
+        activeMinigameStop = () => { running = false; clearInterval(timer); };
+    }
+
+    function resetSave() {
+        if (confirm('ต้องการล้างข้อมูลเซฟและเริ่มใหม่ทั้งหมดใช่หรือไม่?')) {
+            localStorage.removeItem(SAVE_KEY);
+            location.reload();
+        }
+    }
+
+    function closeModal() {
+        if (activeMinigameStop) { activeMinigameStop(); activeMinigameStop = null; }
+        document.getElementById('modalBackdrop').style.display = 'none';
+        paused = false;
+        lastTick = performance.now();
+    }
+
+    function buyIng(key, amount, cost) {
+        if (state.money >= cost) {
+            state.money -= cost;
+            state.today.spent += cost;
+            state.ingredients[key] += amount;
+            SFX.buy();
+            merchant.speech = '🙏 ขอบคุณที่อุดหนุนครับ!';
+            merchant.speechTimer = 3.5;
+            addLog(`ซื้อวัตถุดิบจากพ่อค้าตลาดเรียบร้อย (-${cost} ฿)`);
+            updateUI();
+            saveGame();
+            openMenu('market');
+        } else {
+            SFX.error();
+            addLog('เงินสดไม่พอซื้อวัตถุดิบ!');
+        }
+    }
+
+    function adjRecipe(key, delta) {
+        state.recipe[key] = Math.max(1, Math.min(5, state.recipe[key] + delta));
+        openMenu('recipe');
+        saveGame();
+    }
+
+    function changePrice(delta) {
+        state.price = Math.max(5, Math.min(100, state.price + delta));
+        addLog(`ปรับราคาน้ำส้มเป็นแก้วละ ${state.price} ฿`);
+        openMenu('price');
+        saveGame();
+    }
+
+    function upgradeQueue() {
+        const cost = 80 + 60 * (state.maxQueue - 3);
+        if (state.maxQueue < 8 && state.money >= cost) {
+            state.money -= cost;
+            state.maxQueue += 1;
+            SFX.buy();
+            addLog(`ขยายคิวหน้าร้านเป็นสูงสุด ${state.maxQueue} คิว!`);
+            updateUI(); saveGame(); openMenu('upgrade');
+        } else { SFX.error(); addLog('เงินสดไม่พอสำหรับอัปเกรดนี้'); }
+    }
+
+    function buyUpgrade(key) {
+        const u = UPGRADES[key];
+        if (state.upg[key] >= u.max) return;
+        const cost = upCost(key);
+        if (state.money >= cost) {
+            state.money -= cost;
+            state.upg[key] += 1;
+            SFX.buy();
+            addLog(`🔧 อัปเกรด ${u.label} เป็นเลเวล ${state.upg[key]}!`);
+            updateUI(); saveGame(); openMenu('upgrade');
+        } else { SFX.error(); addLog('เงินสดไม่พอสำหรับอัปเกรดนี้'); }
+    }
+
+    function buyDecor(key) {
+        const d = DECOR[key];
+        if (state.decor[key]) return;
+        if (state.money >= d.cost) {
+            state.money -= d.cost;
+            state.decor[key] = true;
+            SFX.buy();
+            addLog(`🛋️ ติดตั้ง ${d.label} หน้าร้านแล้ว!`);
+            updateUI(); saveGame(); openMenu('decor');
+        } else { SFX.error(); addLog('เงินสดไม่พอซื้อของตกแต่ง'); }
+    }
+
+    function buyTable() {
+        const n = state.tables;
+        if (n >= TABLE_SPOTS.length) return;
+        if (levelInfo().lv < n + 2) { SFX.error(); addLog(`ต้องเลเวลร้าน ${n + 2} ก่อนถึงจะซื้อโต๊ะนี้ได้`); return; }
+        const cost = TABLE_COST[n];
+        if (state.money >= cost) {
+            state.money -= cost;
+            state.tables += 1;
+            SFX.buy();
+            addLog(`🪑 เพิ่มโต๊ะนั่งทานตัวที่ ${state.tables} แล้ว!`);
+            updateUI(); saveGame(); openMenu('tables');
+        } else { SFX.error(); addLog('เงินสดไม่พอซื้อโต๊ะ'); }
+    }
+
+    function buyAutoJuicer() {
+        if (!state.autoJuicer && state.money >= 120) {
+            state.money -= 120;
+            state.autoJuicer = true;
+            SFX.buy();
+            addLog(`⚙️ ติดตั้งเครื่องคั้นน้ำส้มอัตโนมัติเรียบร้อย!`);
+            updateUI(); saveGame(); openMenu('upgrade');
+        } else { SFX.error(); }
+    }
+
+    function hireCatStaff() {
+        if (!state.hasCatStaff && state.money >= 180) {
+            state.money -= 180;
+            state.hasCatStaff = true;
+            SFX.fanfare();
+            addLog(`🐱 จ้าง "น้องแมวบาริสต้า" มายืนช่วยคั้นน้ำส้มในซุ้มแล้ว!`);
+            updateUI(); saveGame(); openMenu('upgrade');
+        } else { SFX.error(); }
+    }
+
+    function hireDogWaiter() {
+        if (!state.hasDogWaiter && state.money >= 220) {
+            state.money -= 220;
+            state.hasDogWaiter = true;
+            SFX.fanfare();
+            waiterDog.speech = '🐶 ปอมพร้อมวิ่งเสิร์ฟแล้วโฮ่ง!';
+            waiterDog.speechTimer = 4;
+            addLog(`🐶 จ้าง "น้องหมาปอมเด็กเสิร์ฟ" มาวิ่งรับออร์เดอร์หน้าร้านแล้ว!`);
+            updateUI(); saveGame(); openMenu('upgrade');
+        } else { SFX.error(); }
+    }
+
+    function moveLoc(id) {
+        const l = LOCATIONS[id];
+        if (!state.unlockedLoc[id]) {
+            if (state.money < l.cost) { SFX.error(); addLog(`เงินสดไม่พอปลดล็อก ${l.name} (ต้องใช้ ${l.cost} ฿)`); return; }
+            state.money -= l.cost;
+            state.unlockedLoc[id] = true;
+        }
+        state.locId = id;
+        state.location = l.name;
+        customers.length = 0;
+        SFX.buy();
+        addLog(`ย้ายร้านไปตั้งที่ "${l.name}" เรียบร้อย!`);
+        updateUI(); saveGame(); closeModal();
+    }
+
+    function claimQuest(i) {
+        const q = state.quests[i];
+        if (q && !q.claimed && state.today[q.type] >= q.target) {
+            q.claimed = true;
+            state.money += q.reward;
+            SFX.fanfare();
+            addLog(`🎯 สำเร็จภารกิจ! รับเงินรางวัล +${q.reward} ฿`);
+            updateUI(); saveGame(); openMenu('quest');
+        }
+    }
+
+    // ===================== ลูกค้าสัตว์เดินมาซื้ออาหาร (ไม่รวมแพนด้าเพราะแพนด้าเป็นพ่อค้าในซุ้ม) =====================
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const raindrops = Array.from({ length: 95 }, () => ({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, speed: 4 + Math.random() * 4 }));
+
+    const customers = [];
+    const animalTypes = [
+        { id: 'owl',     name: 'นกฮูกสีน้ำตาล',     color: '#8d6e63', wing: '#5d4037', icon: '🦉' },
+        { id: 'bluebird',name: 'นกฟ้าตัวกลม',       color: '#38bdf8', wing: '#0284c7', icon: '🐦' },
+        { id: 'bunny',   name: 'ลูกกระต่ายหูยาว',    color: '#fbcfe8', wing: '#f472b6', icon: '🐰', tolMod: -10 },
+        { id: 'critic',  name: 'หมีนักวิจารณ์อาหาร', color: '#a16207', wing: '#78350f', icon: '🐻', critic: true },
+        { id: 'vip',     name: 'เพนกวินไฮโซ VIP',   color: '#fbbf24', wing: '#d97706', icon: '👑', vip: true }
+    ];
+
+    function queueLineCount() {
+        return customers.filter(c => c.state === 'queue' || (c.state === 'walk_in' && !c.refuse)).length;
+    }
+
+    function spawnCustomer(forceVip = false) {
+        const inLine = queueLineCount();
+        if (inLine >= state.maxQueue) return;
+
+        let type;
+        const r = Math.random();
+        if (forceVip || r < (state.decor.luckycat ? 0.17 : 0.12)) type = animalTypes.find(t => t.vip);
+        else if (r < (state.decor.luckycat ? 0.25 : 0.20)) type = animalTypes.find(t => t.critic);
+        else {
+            const normals = animalTypes.filter(t => !t.vip && !t.critic);
+            type = normals[Math.floor(Math.random() * normals.length)];
+        }
+
+        // สุ่มรายการอาหาร/เครื่องดื่มที่ลูกค้าต้องการบนหัว
+        const order = FOOD_ORDERS[Math.floor(Math.random() * FOOD_ORDERS.length)];
+        const budget = curLoc().tol + state.rep * 0.2 + (Math.random() * 14 - 6) + (type.tolMod || 0) + (type.vip ? 25 : 0) + order.bonus;
+        const refuse = state.price > budget;
+
+        customers.push({
+            x: canvas.width + 40,
+            y: 235 + (Math.random() * 16 - 8),
+            targetX: refuse ? 675 : 675 + inLine * 72,
+            type,
+            order,
+            state: 'walk_in',
+            waitTimer: 0,
+            walkFrame: Math.random() * 10,
+            refuse
+        });
+    }
+
+    canvas.addEventListener('click', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const cx = (e.clientX - rect.left) * (canvas.width / rect.width);
+        const cy = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+        if (cx >= merchant.x - 45 && cx <= merchant.x + 85 && cy >= 70 && cy <= 215) {
+            merchant.speech = '🛒 เลือกซื้อของสดได้เลยจ้า!';
+            merchant.speechTimer = 3;
+            openMenu('market');
+        } else if (cx >= 550 && cx <= 700 && cy >= 70 && cy <= 215) {
+            craftJuice(true);
+        }
+    });
+
+    function serveCustomer(c) {
+        state.juiceStock -= 1;
+
+        const recipeBonus = getWeatherFormulaBonus();
+        const tip = getTipBonus() + (c.order ? c.order.bonus : 0);
+        let earned = state.price + tip;
+        let note = tip > 0 ? ' (ทิป!)' : '';
+
+        if (c.type.critic) {
+            if (recipeBonus > 0) {
+                earned = Math.round(earned * 1.5);
+                addRep(2);
+                note = ' (นักวิจารณ์ชม!)';
+                addLog(`🐻 หมีนักวิจารณ์ชมว่า "${c.order.name}" สูตรถูกใจมาก! ชื่อเสียง +2`);
+            } else {
+                earned = state.price;
+                addRep(-2);
+                note = ' (ติสูตร!)';
+                addLog(`🐻 หมีนักวิจารณ์บ่นว่าสูตรไม่เข้ากับอากาศวันนี้... ชื่อเสียง -2`);
+            }
+        }
+        if (c.type.vip) earned *= 2;
+
+        state.money += earned;
+        state.totalSold += 1;
+        state.totalEarned += earned;
+        state.today.sold += 1;
+        state.today.earned += earned;
+        if (c.type.vip) { state.today.vip += 1; state.totalVip += 1; }
+        if (Math.random() < 0.5 || c.type.vip) addRep(1);
+
+        if (c.type.vip && c.waitTimer < 4.5) {
+            state.viralTimer = 15;
+            addLog(`🔥 ${c.type.icon} ${c.type.name} ประทับใจมาก! โพสต์รีวิวร้านจนกลายเป็นไวรัล 15 วินาที!`);
+        }
+
+        SFX.coin(c.type.vip);
+        floatingTexts.push({ x: c.x - 15, y: c.y - 45, text: `+${earned} ฿${note}`, color: c.type.vip ? '#fde047' : '#4ade80', alpha: 1 });
+
+        addLog(`${c.type.icon} ${c.type.name} ซื้อ "${c.order.icon} ${c.order.name}" (+${earned} ฿)`);
+        addXp(c.type.vip ? 3 : 1);
+        const ti = freeTableIdx();
+        if (ti >= 0 && Math.random() < 0.65) {
+            c.state = 'to_table';
+            c.table = ti;
+            c.destX = TABLE_SPOTS[ti].x + 46;
+            c.destY = TABLE_SPOTS[ti].y;
+            addLog(`🪑 ${c.type.name} ถือ ${c.order.icon} ไปนั่งทานที่ร้าน (โต๊ะ ${ti + 1})`);
+        } else {
+            c.state = 'walk_out';
+        }
+        rearrangeQueue();
+        updateUI();
+        saveGame();
+    }
+
+    function finishDining(c) {
+        let extra = c.ate ? 18 : 6;
+        if (state.decor.sofa) extra = Math.round(extra * 1.5);
+        if (c.type.vip) extra *= 2;
+        state.money += extra;
+        state.totalEarned += extra;
+        state.today.earned += extra;
+        state.today.dine += 1;
+        state.totalDine += 1;
+        addXp(2);
+        if (c.ate) addRep(1);
+        const sp = TABLE_SPOTS[c.table] || { x: c.x, y: c.y };
+        floatingTexts.push({ x: sp.x - 10, y: sp.y - 20, text: `+${extra} ฿ (ทานที่ร้าน)`, color: '#fbbf24', alpha: 1 });
+        addLog(`🍽️ ${c.type.icon} ${c.type.name} ทานเสร็จแล้ว ${c.ate ? 'ชมว่าเค้กอร่อย ' : ''}(+${extra} ฿)`);
+        SFX.coin(false);
+        c.state = 'walk_out';
+        updateUI();
+        saveGame();
+    }
+
+    function rearrangeQueue() {
+        const q = customers.filter(c => c.state === 'queue' || (c.state === 'walk_in' && !c.refuse));
+        q.forEach((c, idx) => { c.targetX = 675 + idx * 72; });
+    }
+
+    // ===================== วาดฉาก =====================
+    function drawLights(now) {
+        if (!state.hasLights) return;
+        const night = nightFactor();
+        ctx.strokeStyle = '#555';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(450, 62);
+        ctx.quadraticCurveTo(BX + 60, 95, 830, 62);
+        ctx.stroke();
+
+        for (let lx = 460; lx <= 820; lx += 30) {
+            const ly = 68 + Math.sin((lx - 460) / 360 * Math.PI) * 16;
+            const twinkle = 0.85 + Math.sin(now / 300 + lx) * 0.15;
+            const rad = (16 + night * 12) * twinkle;
+            const grad = ctx.createRadialGradient(lx, ly, 2, lx, ly, rad);
+            grad.addColorStop(0, 'rgba(255, 230, 130, 0.95)');
+            grad.addColorStop(1, 'rgba(255, 190, 60, 0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(lx, ly, rad, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#fff3b0';
+            ctx.beginPath();
+            ctx.arc(lx, ly, 3.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    function drawExtraDecor(now) {
+        const night = nightFactor();
+        if (state.decor.rug) {
+            ctx.fillStyle = '#b91c1c';
+            ctx.fillRect(630, 292, 320, 18);
+            ctx.strokeStyle = '#fbbf24';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(632, 294, 316, 14);
+        }
+        if (state.decor.fountain) {
+            ctx.fillStyle = '#94a3b8';
+            ctx.beginPath(); ctx.ellipse(1010, 252, 42, 14, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#7dd3fc';
+            ctx.beginPath(); ctx.ellipse(1010, 250, 34, 10, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#cbd5e1';
+            ctx.fillRect(1006, 222, 8, 28);
+            ctx.fillStyle = 'rgba(186, 230, 253, 0.85)';
+            for (let i = 0; i < 5; i++) {
+                const t = ((now / 8) + i * 20) % 28;
+                ctx.beginPath();
+                ctx.arc(1010 + (i - 2) * 8, 222 + t, 2.2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        if (state.decor.lantern) {
+            [520, 790].forEach(lx => {
+                ctx.strokeStyle = '#555'; ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.moveTo(lx, 70); ctx.lineTo(lx, 78); ctx.stroke();
+                if (night > 0) {
+                    const g = ctx.createRadialGradient(lx, 90, 2, lx, 90, 26);
+                    g.addColorStop(0, `rgba(255, 120, 80, ${0.5 * night})`);
+                    g.addColorStop(1, 'rgba(255, 120, 80, 0)');
+                    ctx.fillStyle = g;
+                    ctx.beginPath(); ctx.arc(lx, 90, 26, 0, Math.PI * 2); ctx.fill();
+                }
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath(); ctx.ellipse(lx, 90, 8, 11, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#fbbf24';
+                ctx.fillRect(lx - 4, 78, 8, 3);
+                ctx.fillRect(lx - 4, 100, 8, 3);
+            });
+        }
+        if (state.decor.luckycat) {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(498, 196, 16, 16);
+            ctx.beginPath(); ctx.arc(506, 192, 9, 0, Math.PI * 2); ctx.fill();
+            ctx.fillRect(513, 189 + Math.sin(now / 200) * 3, 4, 9);
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(499, 200, 14, 3);
+            ctx.fillStyle = '#fbbf24';
+            ctx.fillRect(504, 204, 5, 5);
+            ctx.fillStyle = '#111';
+            ctx.fillRect(502, 190, 2, 2);
+            ctx.fillRect(508, 190, 2, 2);
+        }
+    }
+
+    function drawTables(now) {
+        for (let i = 0; i < state.tables; i++) {
+            const { x, y } = TABLE_SPOTS[i];
+            if (state.decor.sofa) {
+                ctx.fillStyle = '#be185d';
+                ctx.fillRect(x + 30, y + 4, 34, 10);
+                ctx.fillStyle = '#ec4899';
+                ctx.fillRect(x + 30, y + 12, 34, 20);
+            } else {
+                ctx.fillStyle = '#8b5a2b';
+                ctx.fillRect(x + 38, y + 24, 18, 8);
+            }
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.beginPath(); ctx.ellipse(x, y + 36, 30, 8, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#7f5539';
+            ctx.fillRect(x - 3, y + 16, 6, 20);
+            ctx.fillStyle = '#f4f1de';
+            ctx.beginPath(); ctx.ellipse(x, y + 14, 30, 11, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = '#e07a5f';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            const occ = customers.find(c => c.table === i && c.state === 'dining');
+            if (occ) {
+                ctx.font = '14px sans-serif';
+                if (occ.ate) ctx.fillText('🍰', x - 18, y + 14);
+                ctx.fillText(occ.order ? occ.order.icon : '🧃', x + 2, y + 14);
+            }
+        }
+    }
+
+    function drawDecor(now) {
+        drawExtraDecor(now);
+        if (state.decor.plants) {
+            ctx.fillStyle = '#b45309';
+            ctx.fillRect(540, 196, 22, 16);
+            ctx.fillStyle = '#16a34a';
+            ctx.beginPath(); ctx.arc(551, 190, 12, 0, Math.PI * 2); ctx.arc(543, 184, 8, 0, Math.PI * 2); ctx.arc(559, 184, 8, 0, Math.PI * 2); ctx.fill();
+        }
+        if (state.decor.radio) {
+            ctx.fillStyle = '#334155';
+            ctx.fillRect(BX + 96, BY + 62, 20, 14);
+            ctx.fillStyle = '#94a3b8';
+            ctx.fillRect(BX + 99, BY + 65, 8, 8);
+            ctx.fillStyle = '#fbbf24';
+            ctx.fillRect(BX + 110, BY + 66, 3, 3);
+            if (Math.floor(now / 400) % 2 === 0) {
+                ctx.fillStyle = '#f472b6';
+                ctx.font = '12px sans-serif';
+                ctx.fillText('♪', BX + 108, BY + 54);
+            } else {
+                ctx.fillStyle = '#60a5fa';
+                ctx.font = '12px sans-serif';
+                ctx.fillText('♫', BX + 100, BY + 50);
+            }
+        }
+        if (state.decor.flag) {
+            ctx.fillStyle = '#6b4c35';
+            ctx.fillRect(BX + 138, BY - 10, 4, 100);
+            const wave = Math.sin(now / 200) * 3;
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.moveTo(BX + 142, BY - 8);
+            ctx.lineTo(BX + 172, BY + 2 + wave);
+            ctx.lineTo(BX + 142, BY + 14);
+            ctx.fill();
+        }
+        if (state.decor.umbrella) {
+            ctx.fillStyle = '#6b4c35';
+            ctx.fillRect(748, 190, 4, 50);
+            ctx.fillStyle = '#f97316';
+            ctx.beginPath(); ctx.arc(750, 190, 36, Math.PI, 0); ctx.fill();
+            ctx.fillStyle = '#fff7ed';
+            ctx.beginPath(); ctx.arc(750, 190, 36, Math.PI * 1.35, Math.PI * 1.65); ctx.lineTo(750, 190); ctx.fill();
+        }
+    }
+
+    // ===================== วาดพ่อค้าแพนด้าเชฟ (ตัวละครซ้ายสุดจากภาพ) ยืนคั้นน้ำส้มในซุ้ม =====================
+    function drawPandaChefInBooth(bx, by, now) {
+        const outfit = curOutfit();
+        const isSqueezing = sellerAnim.squeezeTimer > 0;
+        const bob = isSqueezing ? Math.sin(now / 45) * 4.5 : Math.sin(now / 240) * 2;
+        const px = bx + 61;
+        const py = by + 56 + bob;
+
+        // หูแพนด้าสีดำกลม 2 ข้าง
+        ctx.fillStyle = '#1f2937';
+        ctx.beginPath();
+        ctx.arc(px - 10, py - 12, 5, 0, Math.PI * 2);
+        ctx.arc(px + 10, py - 12, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // ลำตัวแพนด้าชุดขาว-ดำ
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.ellipse(px, py + 14, 14, 13, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // หัวแพนด้าสีขาวกลม
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(px, py - 4, 12, 0, Math.PI * 2);
+        ctx.fill();
+
+        // หมวกเชฟทรงสูงบนหัวแพนด้า
+        ctx.fillStyle = outfit.hat || '#ffffff';
+        ctx.fillRect(px - 9, py - 22, 18, 8);
+        ctx.beginPath();
+        ctx.arc(px - 4, py - 23, 5, 0, Math.PI * 2);
+        ctx.arc(px + 4, py - 23, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillRect(px - 9, py - 16, 18, 2);
+
+        // รอบดวงตาแพนด้าสีดำ + ตาขาว
+        ctx.fillStyle = '#1f2937';
+        ctx.beginPath();
+        ctx.ellipse(px - 5, py - 4, 3.5, 4, -0.2, 0, Math.PI * 2);
+        ctx.ellipse(px + 5, py - 4, 3.5, 4, 0.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(px - 6, py - 6, 1.8, 1.8);
+        ctx.fillRect(px + 4, py - 6, 1.8, 1.8);
+
+        if (outfit.glasses) {
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(px - 9, py - 7, 8, 5);
+            ctx.fillRect(px + 1, py - 7, 8, 5);
+            ctx.fillRect(px - 1, py - 6, 2, 2);
+        }
+
+        // จมูกแพนด้า
+        ctx.fillStyle = '#111827';
+        ctx.fillRect(px - 2, py - 1, 4, 2.5);
+
+        // ผ้าพันคอเชฟสีแดงผูกคอ
+        ctx.fillStyle = outfit.scarf || '#ef4444';
+        ctx.fillRect(px - 11, py + 4, 22, 4);
+        ctx.fillRect(px + 2, py + 7, 4, 6);
+
+        // แขนแพนด้าสีดำ ขยับโยกคันคั้นน้ำส้มขึ้น-ลง
+        ctx.fillStyle = '#1f2937';
+        const armY = isSqueezing ? py + 2 + Math.sin(now / 40) * 7 : py + 8;
+        ctx.beginPath();
+        ctx.roundRect(bx + 35, armY, 16, 7, 3);
+        ctx.fill();
+
+        // มือขวาถือส้มเตรียมคั้น
+        ctx.beginPath();
+        ctx.arc(px + 12, py + 10 - (isSqueezing ? Math.sin(now / 40) * 4 : 0), 4.5, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // ===================== วาดตัวละครลูกค้าสัตว์แต่ละสายพันธุ์ + ท่าเดิน + ป้ายสั่งอาหารบนหัว =====================
+    function drawCustomerSprite(c, now) {
+        ctx.save();
+        const isWalking = (c.state !== 'queue' && c.state !== 'dining');
+        const walkBob = isWalking ? Math.abs(Math.sin(c.walkFrame)) * 5.5 : Math.sin(now / 280) * 1.5;
+        const legSwing = isWalking ? Math.sin(c.walkFrame) * 6 : 0;
+
+        ctx.translate(c.x, c.y - walkBob);
+
+        // เงาใต้เท้า
+        ctx.fillStyle = 'rgba(0,0,0,0.28)';
+        ctx.beginPath();
+        ctx.ellipse(0, 27 + walkBob, 19, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // ขาก้าวเดินซ้าย-ขวา
+        ctx.fillStyle = '#d97706';
+        ctx.fillRect(-7 + legSwing, 19, 5, 8);
+        ctx.fillRect(3 - legSwing, 19, 5, 8);
+
+        if (c.type.id === 'owl') {
+            // นกฮูกสีน้ำตาลกางปีก (ตามภาพต้นฉบับ)
+            const wingFlap = isWalking ? Math.sin(c.walkFrame * 1.3) * 5 : Math.sin(now / 220) * 2;
+            ctx.fillStyle = '#6d4c41';
+            ctx.beginPath();
+            ctx.ellipse(-19, 4 + wingFlap, 9, 14, 0.4, 0, Math.PI * 2);
+            ctx.ellipse(19, 4 - wingFlap, 9, 14, -0.4, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#8d6e63';
+            ctx.beginPath(); ctx.arc(0, 5, 17, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#d7ccc8';
+            ctx.beginPath(); ctx.ellipse(0, 8, 11, 11, 0, 0, Math.PI * 2); ctx.fill();
+            // ลายขนหน้าอกนกฮูก
+            ctx.fillStyle = '#5d4037';
+            ctx.fillRect(-5, 4, 3, 2); ctx.fillRect(2, 4, 3, 2);
+            ctx.fillRect(-3, 9, 3, 2); ctx.fillRect(3, 9, 3, 2);
+
+            // หัวนกฮูก + คิ้วขนนก
+            ctx.fillStyle = '#8d6e63';
+            ctx.beginPath(); ctx.arc(0, -13, 14, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#5d4037';
+            ctx.beginPath();
+            ctx.moveTo(-12, -22); ctx.lineTo(-6, -28); ctx.lineTo(-2, -21);
+            ctx.moveTo(12, -22); ctx.lineTo(6, -28); ctx.lineTo(2, -21);
+            ctx.fill();
+
+            // ตาโตนกฮูก + จะงอยปากเหลือง
+            ctx.fillStyle = '#fff';
+            ctx.beginPath(); ctx.arc(-5, -14, 4.5, 0, Math.PI * 2); ctx.arc(5, -14, 4.5, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#111';
+            ctx.beginPath(); ctx.arc(-5, -14, 2.3, 0, Math.PI * 2); ctx.arc(5, -14, 2.3, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#f59e0b';
+            ctx.beginPath(); ctx.moveTo(-3, -11); ctx.lineTo(3, -11); ctx.lineTo(0, -7); ctx.fill();
+        } else if (c.type.id === 'bluebird') {
+            // นกฟ้าตัวกลม (ตามภาพต้นฉบับ)
+            ctx.fillStyle = '#38bdf8';
+            ctx.beginPath(); ctx.arc(0, 5, 16, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(0, -11, 13, 0, Math.PI * 2); ctx.fill();
+            // ปีกข้างตัวขยับตอนเดิน
+            ctx.fillStyle = '#0284c7';
+            ctx.beginPath(); ctx.ellipse(8, 5 + legSwing * 0.4, 8, 11, -0.2, 0, Math.PI * 2); ctx.fill();
+            // ตา + ปากส้ม
+            ctx.fillStyle = '#111';
+            ctx.beginPath(); ctx.arc(-5, -13, 2.5, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#f97316';
+            ctx.beginPath(); ctx.moveTo(-12, -12); ctx.lineTo(-19, -9); ctx.lineTo(-12, -6); ctx.fill();
+        } else {
+            // ลูกกระต่าย / หมีนักวิจารณ์ / เพนกวิน VIP
+            ctx.fillStyle = c.type.color;
+            ctx.beginPath(); ctx.arc(0, 5, 17, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(0, -13, 13.5, 0, Math.PI * 2); ctx.fill();
+
+            if (c.type.id === 'bunny') {
+                ctx.fillStyle = '#fbcfe8';
+                ctx.fillRect(-8, -34, 5, 14);
+                ctx.fillRect(3, -34, 5, 14);
+            }
+            ctx.fillStyle = '#111';
+            ctx.beginPath(); ctx.arc(-5, -15, 2.4, 0, Math.PI * 2); ctx.arc(4, -15, 2.4, 0, Math.PI * 2); ctx.fill();
+        }
+
+        // ถุงช้อปปิ้งเล็กๆ แกว่งตามจังหวะเดินซื้อของ
+        if (c.state === 'walk_in' || c.state === 'walk_out') {
+            ctx.fillStyle = '#fef08a';
+            ctx.fillRect(-20, 4 + legSwing * 0.5, 11, 12);
+            ctx.strokeStyle = '#b45309';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(-20, 4 + legSwing * 0.5, 11, 12);
+        }
+
+        // ป้ายข้อความสั่งอาหาร + รูปสินค้าบนหัวลูกค้า
+        if ((c.state === 'walk_in' || c.state === 'queue') && !c.refuse && c.order) {
+            const labelText = `อยากได้: ${c.order.name}`;
+            ctx.font = 'bold 11px Kanit';
+            const textW = ctx.measureText(labelText).width;
+            const boxW = textW + 34;
+            const boxH = 26;
+            const boxX = -boxW / 2;
+            const boxY = -62;
+
+            // กล่องคำพูด
+            ctx.fillStyle = c.type.vip ? '#fef08a' : (c.type.critic ? '#e0e7ff' : 'rgba(255, 255, 255, 0.95)');
+            ctx.beginPath();
+            ctx.roundRect(boxX, boxY, boxW, boxH, 7);
+            ctx.fill();
+            ctx.strokeStyle = '#6b4c35';
+            ctx.lineWidth = 1.8;
+            ctx.stroke();
+
+            // ไอคอนรูปสินค้า + ข้อความสิ่งที่ต้องการ
+            ctx.font = '15px sans-serif';
+            ctx.fillText(c.order.icon, boxX + 6, boxY + 18);
+            ctx.font = 'bold 11px Kanit';
+            ctx.fillStyle = '#1f2937';
+            ctx.fillText(labelText, boxX + 25, boxY + 17);
+
+            // แถบความอดทนเมื่อยืนรอคิว
+            if (c.state === 'queue') {
+                const left = Math.max(0, 1 - c.waitTimer / patienceTime());
+                ctx.fillStyle = 'rgba(0,0,0,0.4)';
+                ctx.fillRect(-20, boxY - 7, 40, 4);
+                ctx.fillStyle = left > 0.5 ? '#22c55e' : (left > 0.25 ? '#f59e0b' : '#ef4444');
+                ctx.fillRect(-20, boxY - 7, 40 * left, 4);
+            }
+        } else if (c.state === 'dining') {
+            ctx.font = '15px sans-serif';
+            ctx.fillText('😋 อร่อย!', -22, -34);
+        } else if (c.refuse) {
+            ctx.font = 'bold 12px Kanit';
+            ctx.fillStyle = '#fee2e2';
+            ctx.beginPath(); ctx.roundRect(-32, -55, 64, 22, 6); ctx.fill();
+            ctx.fillStyle = '#b91c1c';
+            ctx.fillText('💢 แพงไป!', -26, -40);
+        }
+
+        ctx.restore();
+    }
+
+    function drawPixelScene(now) {
+        const isRain = curWeather().id === 'rain';
+        const isSunny = curWeather().id === 'sunny';
+        const loc = state.locId;
+        const skin = curSkin();
+
+        // 1. พื้นหลังตามทำเล
+        if (loc === 'beach') {
+            ctx.fillStyle = isRain ? '#64748b' : '#7dd3fc';
+            ctx.fillRect(0, 0, canvas.width, 95);
+            ctx.fillStyle = isRain ? '#475569' : '#0ea5e9';
+            ctx.fillRect(0, 95, canvas.width, 70);
+            ctx.fillStyle = 'rgba(255,255,255,0.55)';
+            for (let wx = 0; wx < canvas.width; wx += 90) {
+                const x = (wx + now / 30) % canvas.width;
+                ctx.fillRect(x, 108 + ((wx / 90) % 3) * 18, 42, 3);
+            }
+            [120, 330, 900, 1030].forEach(px => {
+                ctx.fillStyle = '#8b5a2b';
+                ctx.fillRect(px, 70, 8, 95);
+                ctx.fillStyle = '#16a34a';
+                ctx.beginPath();
+                ctx.ellipse(px - 14, 72, 24, 8, -0.4, 0, Math.PI * 2);
+                ctx.ellipse(px + 22, 72, 24, 8, 0.4, 0, Math.PI * 2);
+                ctx.ellipse(px + 4, 62, 8, 22, 0, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        } else {
+            ctx.fillStyle = isSunny ? '#4d7c3f' : '#3d5a45';
+            if (loc === 'park') ctx.fillStyle = isSunny ? '#5fa14a' : '#4a7a54';
+            ctx.fillRect(0, 0, canvas.width, 165);
+
+            const treePositions = loc === 'park' ? [60, 170, 290, 410, 740, 900, 1020] : [90, 210, 410, 740, 1020];
+            treePositions.forEach(tx => {
+                ctx.fillStyle = '#4a3525';
+                ctx.fillRect(tx, 95, 18, 70);
+                ctx.fillStyle = loc === 'park' ? (isSunny ? '#3f8f4f' : '#356b44') : (isSunny ? '#2e6f40' : '#2c4c38');
+                ctx.fillRect(tx - 32, 42, 82, 55);
+                ctx.fillRect(tx - 20, 22, 58, 30);
+            });
+
+            ctx.fillStyle = '#5c4033';
+            ctx.fillRect(0, 145, canvas.width, 6);
+            ctx.fillRect(0, 158, canvas.width, 6);
+            for (let rx = 20; rx < canvas.width; rx += 55) {
+                ctx.fillStyle = '#6e4e3e';
+                ctx.fillRect(rx, 130, 10, 40);
+            }
+        }
+
+        // 3. พื้น
+        const groundColor = loc === 'beach' ? '#ecd9a0' : (loc === 'park' ? '#7fae5e' : '#7c6d61');
+        const speckColor = loc === 'beach' ? '#d9c382' : (loc === 'park' ? '#6c9a4d' : '#685a4f');
+        ctx.fillStyle = groundColor;
+        ctx.fillRect(0, 165, canvas.width, 185);
+        ctx.fillStyle = speckColor;
+        for (let i = 0; i < 40; i++) ctx.fillRect((i * 83) % canvas.width, 175 + ((i * 37) % 155), 5, 5);
+
+        if (loc === 'park') {
+            const flowerCols = ['#f472b6', '#facc15', '#ffffff', '#c084fc'];
+            for (let i = 0; i < 30; i++) {
+                ctx.fillStyle = flowerCols[i % 4];
+                ctx.fillRect((i * 97 + 30) % canvas.width, 185 + ((i * 53) % 140), 4, 4);
+            }
+        }
+
+        if (isRain || loc === 'country') {
+            const puddles = [{ x: 220, y: 265, w: 95, h: 26 }, { x: 400, y: 315, w: 80, h: 22 }, { x: 750, y: 295, w: 105, h: 28 }, { x: 930, y: 325, w: 85, h: 22 }];
+            ctx.fillStyle = 'rgba(95, 118, 138, 0.65)';
+            puddles.forEach(p => {
+                ctx.beginPath();
+                ctx.ellipse(p.x, p.y, p.w / 2, p.h / 2, 0, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        // 4. ถนน / ทางเดินไม้
+        if (loc === 'beach') {
+            ctx.fillStyle = '#a47148';
+            ctx.fillRect(0, 345, canvas.width, 65);
+            ctx.fillStyle = '#7c5233';
+            for (let px = 0; px < canvas.width; px += 40) ctx.fillRect(px, 345, 3, 65);
+        } else {
+            ctx.fillStyle = '#adb5bd';
+            ctx.fillRect(0, 345, canvas.width, 10);
+            ctx.fillStyle = '#495057';
+            ctx.fillRect(0, 355, canvas.width, 55);
+            ctx.fillStyle = '#ced4da';
+            for (let lx = 20; lx < canvas.width; lx += 85) ctx.fillRect(lx, 380, 45, 5);
+        }
+
+        // 5. ซุ้มน้ำส้ม + พ่อค้าแพนด้าเชฟคั้นน้ำส้ม
+        const bx = BX, by = BY;
+        ctx.fillStyle = '#2b2d42';
+        ctx.fillRect(bx - 52, by + 65, 38, 42);
+        ctx.fillStyle = '#f59e0b';
+        ctx.font = 'bold 9px sans-serif';
+        ctx.fillText('JUICE', bx - 46, by + 82);
+        ctx.beginPath();
+        ctx.arc(bx - 33, by + 95, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#8b5a2b';
+        ctx.fillRect(bx + 8, by + 30, 8, 70);
+        ctx.fillRect(bx + 104, by + 30, 8, 70);
+
+        for (let i = 0; i < 6; i++) {
+            ctx.fillStyle = i % 2 === 0 ? skin.c1 : skin.c2;
+            ctx.fillRect(bx + i * 20, by + 18, 20, 16);
+        }
+
+        ctx.fillStyle = skin.signBg;
+        ctx.fillRect(bx + 12, by - 14, 96, 22);
+        ctx.fillStyle = skin.signTxt;
+        ctx.font = 'bold 11px monospace';
+        ctx.fillText('ORANGE JUICE', bx + 20, by + 1);
+
+        // วาดพ่อค้าแพนด้าเชฟในซุ้ม
+        drawPandaChefInBooth(bx, by, now);
+
+        if (state.hasCatStaff) {
+            const catBob = Math.abs(Math.sin(now / 180)) * 3;
+            ctx.fillStyle = '#fb923c';
+            ctx.fillRect(bx + 82, by + 52 - catBob, 16, 24);
+            ctx.beginPath();
+            ctx.moveTo(bx + 82, by + 52 - catBob);
+            ctx.lineTo(bx + 86, by + 45 - catBob);
+            ctx.lineTo(bx + 90, by + 52 - catBob);
+            ctx.moveTo(bx + 90, by + 52 - catBob);
+            ctx.lineTo(bx + 94, by + 45 - catBob);
+            ctx.lineTo(bx + 98, by + 52 - catBob);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(bx + 85, by + 41 - catBob, 10, 5);
+        }
+
+        ctx.fillStyle = skin.body;
+        ctx.fillRect(bx, by + 80, 120, 45);
+        ctx.fillStyle = skin.top;
+        ctx.fillRect(bx - 4, by + 76, 128, 10);
+
+        if (state.boothSkin === 'neon') {
+            ctx.strokeStyle = '#22d3ee';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(bx, by + 80, 120, 45);
+        }
+
+        // เครื่องคั้นน้ำส้ม
+        const isSqueezing = sellerAnim.squeezeTimer > 0;
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillRect(bx + 32, by + 60, 12, 16);
+        ctx.strokeStyle = state.upg.press > 0 ? '#facc15' : '#ef4444';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(bx + 38, by + 62);
+        ctx.lineTo(bx + 24, isSqueezing ? by + 70 : by + 50);
+        ctx.stroke();
+
+        ctx.fillStyle = '#fb923c';
+        sellerAnim.drops.forEach(d => { ctx.beginPath(); ctx.arc(d.x, d.y, 2.5, 0, Math.PI * 2); ctx.fill(); });
+
+        ctx.fillStyle = '#f77f00';
+        [bx + 15, bx + 23, bx + 135, bx + 146, bx + 157].forEach(ox => { ctx.beginPath(); ctx.arc(ox, by + 72, 6, 0, Math.PI * 2); ctx.fill(); });
+
+        if (state.upg.cooler > 0) {
+            ctx.fillStyle = '#e0f2fe';
+            ctx.fillRect(bx - 82, by + 70, 26, 38);
+            ctx.strokeStyle = '#0ea5e9';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(bx - 82, by + 70, 26, 38);
+            ctx.fillStyle = '#fb923c';
+            for (let i = 0; i < Math.min(5, state.juiceStock); i++) ctx.fillRect(bx - 78, by + 74 + i * 6, 18, 4);
+        }
+
+        if (state.upg.sign > 0) {
+            const glow = 0.6 + Math.sin(now / 250) * 0.3;
+            ctx.fillStyle = `rgba(250, 204, 21, ${glow})`;
+            ctx.font = 'bold 12px Kanit';
+            ctx.fillText('★'.repeat(state.upg.sign), bx + 42, by - 20);
+        }
+
+        ctx.fillStyle = '#3d2817';
+        ctx.beginPath();
+        ctx.arc(bx + 28, by + 125, 13, 0, Math.PI * 2);
+        ctx.arc(bx + 92, by + 125, 13, 0, Math.PI * 2);
+        ctx.fill();
+
+        drawDecor(now);
+
+        // 6. พ่อค้าตลาด
+        ctx.fillStyle = '#6b4423';
+        ctx.fillRect(838, 162, 42, 22);
+        ctx.fillStyle = '#22c55e';
+        ctx.beginPath();
+        ctx.arc(848, 160, 6, 0, Math.PI * 2);
+        ctx.arc(860, 158, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#a855f7';
+        ctx.beginPath();
+        ctx.arc(870, 160, 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        const mx = merchant.x;
+        const bobY = Math.abs(Math.sin(merchant.walkCycle)) * 4;
+        const my = merchant.y - bobY;
+        const legSwing = Math.sin(merchant.walkCycle) * 5;
+        const armOffset = Math.sin(merchant.armWave) * 6;
+
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(mx + 14, merchant.y + 62, 16, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(130, 145, 155, 0.92)';
+        ctx.beginPath();
+        ctx.roundRect(mx - 22, my - 42, 78, 26, 6);
+        ctx.fill();
+        ctx.fillStyle = '#1f2937';
+        ctx.font = 'bold 13px Kanit';
+        ctx.fillText('🛒 ตลาด', mx - 12, my - 24);
+
+        ctx.fillStyle = '#3b2f2f';
+        ctx.fillRect(mx + 5 + legSwing, merchant.y + 56, 7, 6);
+        ctx.fillRect(mx + 16 - legSwing, merchant.y + 56, 7, 6);
+
+        ctx.fillStyle = '#4a5d4e';
+        ctx.fillRect(mx + 2, my + 18, 24, 39);
+        ctx.fillStyle = '#7f5539';
+        ctx.fillRect(mx + 2, my + 18, 6, 30);
+        ctx.fillRect(mx + 20, my + 18, 6, 30);
+
+        ctx.fillStyle = '#d4a373';
+        ctx.fillRect(mx + 6, my + 4, 16, 14);
+        ctx.fillStyle = '#4a3b32';
+        ctx.fillRect(mx + 6, my + 13, 16, 5);
+
+        ctx.fillStyle = '#111';
+        const eyeShift = merchant.dir > 0 ? 2 : -1;
+        ctx.fillRect(mx + 9 + eyeShift, my + 7, 3, 3);
+        ctx.fillRect(mx + 16 + eyeShift, my + 7, 3, 3);
+
+        ctx.fillStyle = '#f0efeb';
+        ctx.fillRect(mx + 3, my - 6, 22, 11);
+        ctx.fillStyle = '#e07a5f';
+        ctx.fillRect(mx + 12, my - 3, 4, 4);
+
+        ctx.fillStyle = '#4a5d4e';
+        ctx.fillRect(mx + 24, my + 20 + armOffset * 0.5, 10, 7);
+        ctx.fillStyle = '#9b5de5';
+        ctx.beginPath();
+        ctx.arc(mx + 36, my + 22 + armOffset, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (merchant.speechTimer > 0 && merchant.speech) {
+            ctx.font = 'bold 12px Kanit';
+            const tw = ctx.measureText(merchant.speech).width + 18;
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.roundRect(mx + 14 - tw / 2, my - 74, tw, 26, 8);
+            ctx.fill();
+            ctx.strokeStyle = '#6b4c35';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.fillStyle = '#b91c1c';
+            ctx.fillText(merchant.speech, mx + 14 - tw / 2 + 9, my - 56);
+        }
+
+        // 7. โต๊ะนั่งทาน + น้องหมาปอมเด็กเสิร์ฟ
+        drawTables(now);
+
+        if (state.hasDogWaiter) {
+            ctx.save();
+            const moving = waiterDog.state !== 'idle';
+            const dogBob = moving ? Math.abs(Math.sin(waiterDog.walkCycle)) * 4.5 : Math.sin(now / 250) * 1.5;
+            ctx.translate(waiterDog.x, waiterDog.y - dogBob);
+
+            const dw = 64, dh = 60;
+            if (dogImg.complete && dogImg.naturalWidth) {
+                ctx.save();
+                if (waiterDog.dir < 0) ctx.scale(-1, 1);
+                ctx.drawImage(dogImg, -dw / 2, 30 - dh, dw, dh);
+                ctx.restore();
+            }
+
+            if (waiterDog.carryingJuice) {
+                ctx.font = '20px sans-serif';
+                ctx.fillText('🧃', waiterDog.dir < 0 ? -36 : 18, 6);
+            }
+
+            if (waiterDog.speechTimer > 0 && waiterDog.speech) {
+                ctx.font = 'bold 11px Kanit';
+                const stw = ctx.measureText(waiterDog.speech).width + 16;
+                ctx.fillStyle = '#fef08a';
+                ctx.beginPath();
+                ctx.roundRect(-stw / 2, 30 - dh - 26, stw, 22, 6);
+                ctx.fill();
+                ctx.strokeStyle = '#78350f';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+                ctx.fillStyle = '#78350f';
+                ctx.fillText(waiterDog.speech, -stw / 2 + 8, 30 - dh - 11);
+            }
+            ctx.restore();
+        }
+
+        // 8. ลูกค้าเดินซื้ออาหารพร้อมป้ายข้อความบนหัว
+        customers.forEach(c => drawCustomerSprite(c, now));
+
+        // 9. กลางคืน
+        const night = nightFactor();
+        const darkA = night * 0.42 + (isRain ? 0.08 : 0);
+        if (darkA > 0) {
+            ctx.fillStyle = `rgba(15, 23, 60, ${darkA})`;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+        drawLights(now);
+
+        // 10. ตัวเลขเงินลอย
+        for (let i = floatingTexts.length - 1; i >= 0; i--) {
+            const ft = floatingTexts[i];
+            ctx.save();
+            ctx.font = 'bold 16px Kanit';
+            ctx.fillStyle = ft.color;
+            ctx.globalAlpha = Math.max(0, ft.alpha);
+            ctx.fillText(ft.text, ft.x, ft.y);
+            ctx.restore();
+        }
+
+        // 11. ฝน
+        if (isRain) {
+            ctx.strokeStyle = 'rgba(200, 225, 255, 0.55)';
+            ctx.lineWidth = 1.5;
+            raindrops.forEach(r => {
+                ctx.beginPath();
+                ctx.moveTo(r.x, r.y);
+                ctx.lineTo(r.x - 3, r.y + 11);
+                ctx.stroke();
+                if (!paused) {
+                    r.y += r.speed;
+                    r.x -= 1;
+                    if (r.y > canvas.height) { r.y = -10; r.x = Math.random() * canvas.width; }
+                }
+            });
+        }
+    }
+
+    // ===================== ลูปเกม =====================
+    let lastTick = performance.now();
+    let spawnAccumulator = 0;
+    let autoJuiceAccumulator = 0;
+
+    function gameLoop(now) {
+        let dt = ((now - lastTick) / 1000) * state.speed;
+        lastTick = now;
+        if (paused) dt = 0;
+        if (dt > 0.5) dt = 0.5;
+
+        if (sellerAnim.squeezeTimer > 0) sellerAnim.squeezeTimer -= dt;
+        for (let i = sellerAnim.drops.length - 1; i >= 0; i--) {
+            const d = sellerAnim.drops[i];
+            d.x += d.vx * dt; d.y += d.vy * dt; d.vy += 120 * dt; d.life -= dt;
+            if (d.life <= 0) sellerAnim.drops.splice(i, 1);
+        }
+
+        merchant.armWave += dt * 4.5;
+        if (merchant.speechTimer > 0) {
+            merchant.speechTimer -= dt / state.speed;
+        } else if (!paused && Math.random() < 0.004) {
+            merchant.speech = merchant.quotes[Math.floor(Math.random() * merchant.quotes.length)];
+            merchant.speechTimer = 3.5;
+        }
+
+        if (merchant.pauseTimer > 0) {
+            merchant.pauseTimer -= dt;
+        } else {
+            merchant.x += merchant.dir * 22 * dt;
+            merchant.walkCycle += dt * 9;
+            if (merchant.x > merchant.baseX + 26) { merchant.x = merchant.baseX + 26; merchant.dir = -1; merchant.pauseTimer = 1.5; }
+            else if (merchant.x < merchant.baseX - 24) { merchant.x = merchant.baseX - 24; merchant.dir = 1; merchant.pauseTimer = 1.5; }
+        }
+
+        for (let i = floatingTexts.length - 1; i >= 0; i--) {
+            floatingTexts[i].y -= 28 * dt;
+            floatingTexts[i].alpha -= 0.7 * dt;
+            if (floatingTexts[i].alpha <= 0) floatingTexts.splice(i, 1);
+        }
+
+        if (dt > 0) {
+            state.minutes += dt * 4;
+            if (state.viralTimer > 0) state.viralTimer = Math.max(0, state.viralTimer - dt / state.speed);
+
+            if (state.event === 'inspector' && !state.eventDone && state.minutes >= 12 * 60) {
+                state.eventDone = true;
+                if (state.juiceStock >= 3) {
+                    addRep(5);
+                    SFX.fanfare();
+                    addLog('🕵️ ผู้ตรวจพอใจที่ร้านพร้อมขายและสะอาด! ชื่อเสียง +5');
+                } else {
+                    SFX.error();
+                    addLog('🕵️ ผู้ตรวจมาแต่ร้านมีน้ำส้มพร้อมขายไม่ถึง 3 แก้ว พลาดโบนัสชื่อเสียง...');
+                }
+            }
+
+            if (state.minutes >= 21 * 60) {
+                addLog(`🌙 ปิดร้านประจำวันที่ ${state.day} แล้ว! เตรียมเปิดร้านเช้าวันใหม่...`);
+                skipToNextDay();
+            }
+        }
+
+        if (state.happyHour && dt > 0) {
+            state.happyTimer -= dt / state.speed;
+            if (state.happyTimer <= 0) {
+                state.happyHour = false;
+                document.getElementById('btn-happy').classList.remove('active');
+                addLog('หมดเวลาช่วง Happy Hour แล้ว');
+            }
+        }
+
+        if (state.autoJuicer || state.hasCatStaff) {
+            const speedMult = (state.autoJuicer ? 1 : 0) + (state.hasCatStaff ? 1.3 : 0);
+            autoJuiceAccumulator += dt * speedMult;
+            const interval = 3.5 - 0.4 * state.upg.press;
+            if (autoJuiceAccumulator >= interval) {
+                autoJuiceAccumulator = 0;
+                craftJuice(false);
+            }
+        }
+
+        if (state.hasDogWaiter) {
+            if (waiterDog.speechTimer > 0) waiterDog.speechTimer -= dt / state.speed;
+            const waitingQueue = customers.filter(c => c.state === 'queue');
+
+            if (waiterDog.state === 'idle') {
+                waiterDog.dir = 1;
+                if (waitingQueue.length > 0 && state.juiceStock > 0) {
+                    waiterDog.targetCustomer = waitingQueue[0];
+                    waiterDog.carryingJuice = true;
+                    waiterDog.state = 'to_customer';
+                }
+            } else if (waiterDog.state === 'to_customer') {
+                waiterDog.walkCycle += dt * 15;
+                const targetX = waiterDog.targetCustomer ? waiterDog.targetCustomer.x - 25 : 650;
+                waiterDog.dir = targetX >= waiterDog.x ? 1 : -1;
+                waiterDog.x += waiterDog.dir * 145 * dt;
+
+                if (Math.abs(waiterDog.x - targetX) < 10) {
+                    if (waiterDog.targetCustomer && waiterDog.targetCustomer.state === 'queue' && state.juiceStock > 0) {
+                        serveCustomer(waiterDog.targetCustomer);
+                        waiterDog.speech = 'เสิร์ฟด่วนโฮ่ง!';
+                        waiterDog.speechTimer = 1.5;
+                    }
+                    waiterDog.carryingJuice = false;
+                    waiterDog.state = 'to_booth';
+                }
+            } else if (waiterDog.state === 'to_booth') {
+                waiterDog.walkCycle += dt * 15;
+                waiterDog.dir = -1;
+                waiterDog.x -= 145 * dt;
+                if (waiterDog.x <= 610) {
+                    waiterDog.x = 610;
+                    waiterDog.dir = 1;
+                    waiterDog.state = 'idle';
+                }
+            }
+        }
+
+        const viralBoost = state.viralTimer > 0 ? 2.5 : 1.0;
+        const priceFactor = state.price <= 20 ? 1.25 : (state.price > 30 ? 0.85 : 1.0);
+        const repFactor = 0.8 + state.rep / 250;
+        const decorFactor = (state.decor.flag ? 1.08 : 1) * (state.decor.umbrella && curWeather().id !== 'cloudy' ? 1.1 : 1) * (state.hasLights && nightFactor() > 0 ? 1.1 : 1) * (state.decor.lantern && nightFactor() > 0 ? 1.1 : 1);
+        const signFactor = 1 + 0.1 * state.upg.sign + curSkin().rateBonus;
+        spawnAccumulator += dt * (state.happyHour ? 2.0 : 1) * viralBoost * curWeather().rateMod * curLoc().rate * eventRate() * priceFactor * repFactor * decorFactor * signFactor;
+        if (spawnAccumulator >= 3.6) {
+            spawnAccumulator = 0;
+            spawnCustomer();
+        }
+
+        for (let i = customers.length - 1; i >= 0; i--) {
+            const c = customers[i];
+            c.walkFrame += dt * 10;
+
+            if (c.state === 'walk_in') {
+                c.x -= 85 * dt;
+                if (c.x <= c.targetX) {
+                    c.x = c.targetX;
+                    if (c.refuse) {
+                        state.today.lost += 1;
+                        SFX.angry();
+                        floatingTexts.push({ x: c.x - 15, y: c.y - 45, text: 'แพงไป!', color: '#f87171', alpha: 1 });
+                        addLog(`${c.type.icon} ${c.type.name} เห็นราคา ${state.price} ฿ แล้วเดินหนี (แพงเกินไป!)`);
+                        c.state = 'walk_out';
+                    } else {
+                        c.state = 'queue';
+                    }
+                    updateUI();
+                }
+            } else if (c.state === 'queue') {
+                c.waitTimer += dt;
+                if (!state.hasDogWaiter && state.juiceStock > 0 && c.waitTimer >= 1.2) {
+                    serveCustomer(c);
+                } else if (c.waitTimer >= patienceTime()) {
+                    addRep(-1);
+                    state.today.lost += 1;
+                    SFX.angry();
+                    addLog(`${c.type.icon} ${c.type.name} เดินกลับเพราะรอนานเกินไป!`);
+                    c.state = 'walk_out';
+                    rearrangeQueue();
+                    updateUI();
+                }
+            } else if (c.state === 'to_table') {
+                const dx = c.destX - c.x, dy = c.destY - c.y, d = Math.hypot(dx, dy);
+                if (d < 4) {
+                    c.x = c.destX; c.y = c.destY;
+                    c.state = 'dining';
+                    c.diningTimer = 10 + Math.random() * 5;
+                    c.ate = state.ingredients.cakes > 0;
+                    if (c.ate) state.ingredients.cakes -= 1;
+                } else {
+                    const step = Math.min(95 * dt, d);
+                    c.x += dx / d * step;
+                    c.y += dy / d * step;
+                }
+            } else if (c.state === 'dining') {
+                c.diningTimer -= dt;
+                if (c.diningTimer <= 0) finishDining(c);
+            } else if (c.state === 'walk_out') {
+                c.x -= 105 * dt;
+                if (c.x < -50) customers.splice(i, 1);
+            }
+        }
+
+        updateUI();
+        drawPixelScene(now);
+        requestAnimationFrame(gameLoop);
+    }
+
+    // ===================== รายได้ออฟไลน์ =====================
+    function checkOfflineEarnings() {
+        if (state.lastSavedTime && (state.hasCatStaff || state.autoJuicer)) {
+            const elapsedSec = Math.floor((Date.now() - state.lastSavedTime) / 1000);
+            if (elapsedSec > 30) {
+                const cappedSec = Math.min(elapsedSec, 3600 * 4);
+                const earnedOffline = Math.max(5, Math.floor(cappedSec * 0.4));
+                state.money += earnedOffline;
+                addLog(`💰 ยินดีต้อนรับกลับ! ระหว่างที่คุณไม่อยู่ พนักงานช่วยขายน้ำส้มทำเงินได้ +${earnedOffline} ฿!`);
+            }
+        }
+    }
+
+    // ===================== เริ่มเกม =====================
+    checkOfflineEarnings();
+    spawnCustomer();
+    setTimeout(spawnCustomer, 450);
+    updateUI();
+    requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>
